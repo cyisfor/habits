@@ -1,0 +1,12 @@
+local db = require('db')
+
+db.createFriend("the one guy who pays any attention to me",db.circle.family,"Starry","Starry Skies","Sky","Soulsky","Pikabludude")
+db.createFriend("That lady who I met at the FreeGeek who does SciFi book groups",db.circle.friend,"Chris")
+local friend = db.createFriend("Pony transformation enthusiast",db.circle.friend,"EveMare")
+friend.addNote("Knows about TSA")
+friend.addNote("Shares my grumpiness with FimFiction")
+friend = db.createFriend("Extraordinary writer of poni",db.circle.friend,"Heartbreak","H.B.","Jet_Black")
+friend.addNote("Writer of the Heartbreak series")
+friend.addNote("Tends to roleplay really insecurely, always in character, self obsessed, making things hard")
+friend = db.createFriend("Party pony",db.circle.friend,"Pinkie Pie","Pinkamena","Pinkamena Diane Pie","Diane")
+friend.addNote("Does not actually exist.")
