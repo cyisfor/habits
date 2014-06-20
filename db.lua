@@ -118,5 +118,24 @@ M.close = function()
     db:finish()
     print('finished')
 end
-    
+
+M.fields = prep({
+    get = [[
+SELECT attrelid::regclass, attnum, attname
+FROM   pg_attribute
+WHERE  attrelid = $1::regclass
+AND    attnum > 0
+AND    NOT attisdropped
+ORDER  BY attnum]]
+},function(p)
+    return function(table)
+        res = p.get:exec(table)
+        return coroutine.wrap(function()
+            for index,row in res:rows() do
+                coroutine.yield(row.attname)
+            end
+        end)
+    end
+end)
+
 return M
