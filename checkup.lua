@@ -232,7 +232,6 @@ local function createGrid()
                     glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,createGrid)
                 end 
                 grid:attach(disable,3,i,1,1)
-                print('size2',grid:get_size_request())
             end)(habit,i)
             i = i + 1
         end
