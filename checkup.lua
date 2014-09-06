@@ -192,7 +192,6 @@ local function createGrid()
     if creating then glib.source_remove(creating) end
     intervals.clear()
     grid:forall(gtk.Widget.destroy)
-    print('size',grid:get_size_request())
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         local i = 0
         for habit in db.pending() do
