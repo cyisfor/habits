@@ -1,5 +1,7 @@
 local db = require('db')
 
+print('\x1b]0;checkup\a')
+
 function table.join(delim,t)
     local result = nil
     for _,v in ipairs(t) do

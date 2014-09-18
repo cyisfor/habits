@@ -2,6 +2,7 @@ require('luarocks.loader')
 package.cpath = 'luapsql/?.so;'..package.cpath
 local pq = require('psql')
 local db = pq.connect "port=5433 dbname=habits"
+local l = require 'lpeg'
 
 local function checkset(res)
     local stat = res:status()
@@ -36,11 +37,28 @@ function M.transaction(handler)
     assert(ok,err)
 end
 
+local pats = {
+    transaction =l.P{'BEGIN' * (l.V(1) + (1 - l.P("END")))^0 * "END"},
+    longstring = l.P"$$" * (1 - l.P"$$")^0 * l.P"$$",
+    basic = (1 - l.P';')
+}
+pats.any = pats.transaction + pats.longstring + pats.basic
+
+pats.statement = l.C(pats.any^1)
+
+statements = l.Ct(pats.statement * (l.P';' * pats.statement)^0) * l.P';'^0
+
 M.transaction(function()
     local inp = nil
     ok,err = pcall(function()
         inp = io.open("base.sql")
-        db:execmany(inp:read('*a'))
+        for i,statement in ipairs(statements:match(inp:read('*a'))) do
+            statement = statement:gsub("^%s+","")
+            statement = statement:gsub("%s+$","")
+            if #statement > 0 then
+                db:exec(statement)
+            end
+        end
     end)
     if inp ~= nil then
         inp:close()
@@ -67,15 +85,15 @@ M.perform = prep({
 end)
 
 local function makeHabit(res,tuple,nextone)
-    habit = {}
+    local habit = {}
     for n,v in pairs(res:fields()) do
         habit[n] = tuple[n]
     end
     habit.nextone = nextone
-    function habit.perform()
-        M.transaction(function()
-            M.perform(habit.id)
-        end)
+    habit.perform = function()
+        M.perform(habit.id)
+        habit.hasperformed = true
+        habit.dirty = true
     end
     return habit
 end
@@ -83,7 +101,7 @@ end
 M.waitTime = prep({
     -- how long until the next action
     -- how often - time since last
-    find = "SELECT EXTRACT(EPOCH FROM howOften - (now() - performed)) AS whenn FROM habits WHERE howOften < now() - performed ORDER BY whenn DESC"
+    find = "SELECT EXTRACT(EPOCH FROM howOften - (now() - performed)) AS whenn FROM habits WHERE howOften / 2 < now() - performed ORDER BY whenn DESC"
 },function(p)
     return function()
         local res = p.find:exec()
@@ -96,7 +114,7 @@ end)
 
 
 M.pending = prep({
-    find = "SELECT id,description,EXTRACT(EPOCH FROM howOften),EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed FROM habits WHERE performed IS NULL OR (howOften < now() - performed) ORDER BY performed"
+    find = "SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed FROM habits WHERE performed IS NULL OR (howOften / 2 < now() - performed) ORDER BY performed"
 },function(p)
     return function()
         local res = p.find:exec()
@@ -120,21 +138,62 @@ M.close = function()
 end
 
 M.fields = prep({
+    getclass = "SELECT oid FROM pg_class WHERE relname = $1::name AND relkind = $2",
     get = [[
-SELECT attrelid::regclass, attnum, attname
+SELECT attname
 FROM   pg_attribute
-WHERE  attrelid = $1::regclass
+WHERE  attrelid = $1
 AND    attnum > 0
 AND    NOT attisdropped
 ORDER  BY attnum]]
 },function(p)
     return function(table)
-        res = p.get:exec(table)
-        return coroutine.wrap(function()
-            for index,row in res:rows() do
-                coroutine.yield(row.attname)
+        print('searching for public.'..table)
+        local res = p.getclass:exec(table,'r')        
+        if #res == 0 then return {} end
+        local class = res[1].oid
+        print('class',class)
+        local res = checkset(p.get:exec(class))
+        print('got res',table,tostring(#res))
+        local ret = {}
+        for index,row in res:rows() do
+            ret[#ret+1] = row.attname
+        end
+        return ret
+    end
+end)
+
+M.set = function(sets)
+    local id = nil
+    local query = nil
+    local args = {}
+    for n,v in pairs(sets) do
+        if n == 'id' then
+            print('idee')
+            args[#args+1] = tonumber(v)
+            id = #args
+        else
+            args[#args+1] = v
+            if query then
+                query = query .. ' AND '..n..'='..tostring(#args)
+            else
+                query = n..'='..tostring(#args)
             end
-        end)
+        end
+    end
+    query = 'UPDATE habits SET '..query..' WHERE id = $'..tostring(id)
+    return prep({set = query},function(p)
+        return p:exec(unpack(args))
+    end)
+end
+
+M.find = prep({
+    find = 'SELECT * FROM habits WHERE description LIKE $1'
+},function(p)
+    return function(search)
+        local res = checkset(p.find:exec(search))
+        print('search for',search,'got',#res)
+        return res
     end
 end)
 
