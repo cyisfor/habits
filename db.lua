@@ -118,9 +118,9 @@ end)
 
 M.pending = prep({
     find = [[WITH result AS (
-    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,performed FROM habits) 
-    SELECT id,description,frequency,elapsed,hasperformed FROM results
-    WHERE ( NOT hasperformed ) OR (frequency / 2 < now() - performed) ORDER BY elapsed / frequency
+    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits) 
+    SELECT id,description,frequency,elapsed,hasperformed FROM result
+    WHERE ( NOT hasperformed ) OR (howOften / 2 < now() - performed) ORDER BY elapsed / frequency
 ]]
 },function(p)
     return function()

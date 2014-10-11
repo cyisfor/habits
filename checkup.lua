@@ -110,6 +110,8 @@ vbox:pack_start(grid,true,true,1)
 local intervals = (function ()
     local labels = {}
     local habits = {}
+    local scale = 100
+    local a = scale * scale
     return setmetatable({
         set = function(habit,order,value) 
             labels[habit.id] = {habit,value}
@@ -117,15 +119,20 @@ local intervals = (function ()
         end,
         get = function(habit)
             if habit == nil then
-                local scale = 100
-                local order = math.random(0,scale*(#habits-1))
-                order = scale - order * (order - scale) -- bias it towards 0
-                order = math.floor(order / scale)
+                print('nilllll')
+                local order = math.random(0,#habits-1)
+                print(order)
+                order = scale - order * (scale * 2 - order) / a
+                print(order,#habits)
+                -- bias it towards 0
+                order = math.floor(order)
                 assert(order >= 0)
                 assert(order < #habits)
                 habit = habits[order+1] -- 1-based addressing grumble
             end
+            print('idee',habit.id)
             local entry = labels[habit.id]
+            print('entr',entry[2])
             if not entry then return end
             entry[1] = habit
             return entry[2],habit
@@ -218,7 +225,7 @@ local function createGrid()
                 else
                     intervalLabel:override_color(gtk.StateFlags.NORMAL,black)
                 end
-                intervals.set(habit,intervalLabel)
+                intervals.set(habit,i,intervalLabel)
                 -- never using contacted in a callback
                 -- no need to save in the environment
                 grid:attach(intervalLabel,1,i,1,1)
@@ -248,6 +255,7 @@ local function createGrid()
         end
         grid:show_all()
         creating = false
+        print(intervals.get())
         return false
     end))
 end
