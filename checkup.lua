@@ -1,3 +1,5 @@
+pcall(require,'luarocks.loader')
+pcall(require,'fancyrequire.relative')
 local db = require('db')
 
 print('\x1b]0;checkup\a')
@@ -35,7 +37,7 @@ function interval(i)
                     result = result .. things..' '..one
                 elseif things == 0 then
                 else
-                    result = result .. things..' '..(many or (one..'s'))
+                    result = result .. things..' '..(many or (one..'s'))..' '
                 end
             end
         end
@@ -48,11 +50,7 @@ function interval(i)
                 result = result .. things
             end
         end
-        addSeconds = addSpaced('0')
-        function addMinutes(things)
-            addSeconds(things)
-            result = result .. ':'
-        end
+        addMinutes = addSpaced('0')
         function addHours(things)        
             if things == 0 then return end
             addSpaced(' ')(things) 
@@ -69,9 +67,6 @@ function interval(i)
             i = produce(i,24,addHours)
             if i > 0 then
                 i = produce(i,60,addMinutes)
-                if i > 0 then
-                    produce(i,60,addSeconds)
-                end
             end
         end
 
@@ -91,6 +86,7 @@ local gi = require('lgi')
 local gtk = gi.require('Gtk')
 local glib = gi.require('GLib')
 local gdk = gi.require('Gdk')
+local notify = gi.require('Notify')
 
 local window = gtk.Window {
     title = 'Checkup on Friends',
