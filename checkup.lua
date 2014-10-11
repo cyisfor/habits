@@ -88,6 +88,8 @@ local glib = gi.require('GLib')
 local gdk = gi.require('Gdk')
 local notify = gi.require('Notify')
 
+notify.init("Catchup")
+
 local window = gtk.Window {
     title = 'Checkup on Friends',
     default_width = 400,
@@ -106,37 +108,49 @@ window:add(vbox)
 vbox:pack_start(grid,true,true,1)
 
 local intervals = (function ()
-    local store = {}
-    return {
-        set = function(key,value) 
-            store[key.id] = {key,value}
+    local labels = {}
+    local habits = {}
+    return setmetatable({
+        set = function(habit,order,value) 
+            labels[habit.id] = {habit,value}
+            habits[order] = habit
         end,
-        get = function(key)
-            local entry = store[key.id]
+        get = function(habit)
+            if habit == nil then
+                local scale = 100
+                local order = math.random(0,scale*(#habits-1))
+                order = scale - order * (order - scale) -- bias it towards 0
+                order = math.floor(order / scale)
+                assert(order >= 0)
+                assert(order < #habits)
+                habit = habits[order+1] -- 1-based addressing grumble
+            end
+            local entry = labels[habit.id]
             if not entry then return end
-            entry[1] = key
+            entry[1] = habit
             return entry[2]
         end,
-        check = function(key)
-            local entry = store[key.id]
+        check = function(habit)
+            local entry = labels[habit.id]
             if not entry then return false end
-            local oldkey = entry[1]
-            if oldkey.dirty then return false end
-            store[key.id] = {key,entry[2]}
+            local oldhabit = entry[1]
+            if oldhabit.dirty then return false end
+            labels[habit.id] = {habit,entry[2]}
             return true
         end,
         clear = function()
-            store = {}
-        end,
-        pairs = function()
-            local iter,init,id = pairs(store)
+            labels = {}
+        end},        
+    {
+        __call = function()
+            local iter,init,order = ipairs(habits)
             return function()
-                id,value = iter(init,id)
-                if id == nil then return nil end
-                return unpack(value)
+                order,habit = iter(init,order)
+                if order == nil then return nil end
+                return unpack(labels[habit.id])
             end
         end
-    }
+    })
 end)()
 
 local function catch(sub) 
@@ -257,6 +271,7 @@ local function updateIntervals()
 end
 
 local function raiseWindow()
+    local n = notify.Notification.new("Habits",
     window:present()
     glib.idle_add(glib.PRIORITY_DEFAULT,catch(function() window:grab_focus() end))
     return true

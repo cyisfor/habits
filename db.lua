@@ -1,5 +1,6 @@
 require('luarocks.loader')
-package.cpath = 'luapsql/?.so;'..package.cpath
+local resource = require('resource')()
+local safeopen = require('sanity.open')
 local pq = require('psql')
 local db = pq.connect "port=5433 dbname=habits"
 local l = require 'lpeg'
@@ -9,7 +10,6 @@ local function checkset(res)
     assert(stat == 'PGRES_COMMAND_OK' or stat == 'PGRES_TUPLES_OK',db:error())
     return res
 end
-
 
 local M = {}
 
@@ -51,14 +51,15 @@ statements = l.Ct(pats.statement * (l.P';' * pats.statement)^0) * l.P';'^0
 M.transaction(function()
     local inp = nil
     ok,err = pcall(function()
-        inp = io.open("base.sql")
-        for i,statement in ipairs(statements:match(inp:read('*a'))) do
-            statement = statement:gsub("^%s+","")
-            statement = statement:gsub("%s+$","")
-            if #statement > 0 then
-                db:exec(statement)
+        safeopen(resource("base.sql"),function(inp)
+            for i,statement in ipairs(statements:match(inp:read('*a'))) do
+                statement = statement:gsub("^%s+","")
+                statement = statement:gsub("%s+$","")
+                if #statement > 0 then
+                    db:exec(statement)
+                end
             end
-        end
+        end)
     end)
     if inp ~= nil then
         inp:close()
@@ -101,7 +102,7 @@ end
 M.waitTime = prep({
     -- how long until the next action
     -- how often - time since last
-    find = "SELECT EXTRACT(EPOCH FROM howOften - (now() - performed)) AS whenn FROM habits WHERE howOften / 2 < now() - performed ORDER BY whenn DESC"
+    find = "SELECT EXTRACT(EPOCH FROM howOften - (now() - performed)) AS whenn FROM habits WHERE whenn > 0 ORDER BY whenn DESC LIMIT 1"
 },function(p)
     return function()
         local res = p.find:exec()
@@ -114,7 +115,7 @@ end)
 
 
 M.pending = prep({
-    find = "SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed FROM habits WHERE performed IS NULL OR (howOften / 2 < now() - performed) ORDER BY performed"
+    find = "SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed FROM habits WHERE performed IS NULL OR (howOften / 2 < now() - performed) ORDER BY elapsed / frequency"
 },function(p)
     return function()
         local res = p.find:exec()
