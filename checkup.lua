@@ -107,10 +107,11 @@ local grid = gtk.Grid()
 window:add(vbox)
 vbox:pack_start(grid,true,true,1)
 
+math.randomseed(os.time())
 local intervals = (function ()
     local labels = {}
     local habits = {}
-    local scale = 100
+    local scale = 1000
     local a = scale * scale
     return setmetatable({
         set = function(habit,order,value) 
@@ -119,20 +120,15 @@ local intervals = (function ()
         end,
         get = function(habit)
             if habit == nil then
-                print('nilllll')
-                local order = math.random(0,#habits-1)
-                print(order)
-                order = scale - order * (scale * 2 - order) / a
-                print(order,#habits)
+                local order = math.random(0,scale)
+                order = 1 - order * (scale * 2 - order) / a
                 -- bias it towards 0
                 order = math.floor(order)
                 assert(order >= 0)
-                assert(order < #habits)
-                habit = habits[order+1] -- 1-based addressing grumble
+                assert(order < 1)
+                habit = habits[order*#habits+1] -- 1-based addressing grumble
             end
-            print('idee',habit.id)
             local entry = labels[habit.id]
-            print('entr',entry[2])
             if not entry then return end
             entry[1] = habit
             return entry[2],habit
@@ -206,6 +202,13 @@ black.green= 0
 black.blue = 0
 black.alpha = 1
 
+local function raiseWindow()
+    local label,habit = intervals.get()
+    local n = notify.Notification.new("Habits",habit.description,"dialog-warning")
+    n:show()
+    return true
+end
+
 local creating = false
 local function createGrid()
     if creating then glib.source_remove(creating) end
@@ -255,7 +258,7 @@ local function createGrid()
         end
         grid:show_all()
         creating = false
-        print(intervals.get())
+        raiseWindow()
         return false
     end))
 end
@@ -275,13 +278,6 @@ local function updateIntervals()
             label:override_color(gtk.StateFlags.NORMAL,black)
         end
     end
-    return true
-end
-
-local function raiseWindow()
-    local label,habit = intervals.get()
-    local n = notify.Notification.new("Habits",habit.description,"dialog-warning")
-    n.show()
     return true
 end
 
