@@ -128,7 +128,7 @@ local intervals = (function ()
             local entry = labels[habit.id]
             if not entry then return end
             entry[1] = habit
-            return entry[2]
+            return entry[2],habit
         end,
         check = function(habit)
             local entry = labels[habit.id]
@@ -271,9 +271,9 @@ local function updateIntervals()
 end
 
 local function raiseWindow()
-    local n = notify.Notification.new("Habits",
-    window:present()
-    glib.idle_add(glib.PRIORITY_DEFAULT,catch(function() window:grab_focus() end))
+    local label,habit = intervals.get()
+    local n = notify.Notification.new("Habits",habit.description,"dialog-warning")
+    n.show()
     return true
 end
 
@@ -283,7 +283,7 @@ end
     local function start()
         assert(handle == nil)
         handle = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,1,updateIntervals)
-        glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,1800,raiseWindow)
+        glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,10,raiseWindow)
     end
     local function stop()
         glib.source_remove(handle)

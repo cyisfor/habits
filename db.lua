@@ -99,6 +99,7 @@ local function makeHabit(res,tuple,nextone)
     return habit
 end
 
+--[[
 M.waitTime = prep({
     -- how long until the next action
     -- how often - time since last
@@ -112,10 +113,15 @@ M.waitTime = prep({
         return res[1].whenn
     end
 end)
+]]--
 
 
 M.pending = prep({
-    find = "SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed FROM habits WHERE performed IS NULL OR (howOften / 2 < now() - performed) ORDER BY elapsed / frequency"
+    find = [[WITH result AS (
+    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,performed FROM habits) 
+    SELECT id,description,frequency,elapsed,hasperformed FROM results
+    WHERE ( NOT hasperformed ) OR (frequency / 2 < now() - performed) ORDER BY elapsed / frequency
+]]
 },function(p)
     return function()
         local res = p.find:exec()
