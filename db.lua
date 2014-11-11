@@ -85,6 +85,14 @@ M.perform = prep({
     end
 end)
 
+local setEnabled = prep({
+    update = 'UPDATE habits SET enabled = $2 WHERE id = $1'
+},function(p)
+    return function(enabled)
+        return p.update:exec(enabled)
+    end
+end)
+
 local function makeHabit(res,tuple,nextone)
     local habit = {}
     for n,v in pairs(res:fields()) do
@@ -95,6 +103,9 @@ local function makeHabit(res,tuple,nextone)
         M.perform(habit.id)
         habit.hasperformed = true
         habit.dirty = true
+    end
+    habit.enabled = function(enabled)
+        setEnabled(habit.id,enabled)
     end
     return habit
 end
@@ -118,10 +129,10 @@ end)
 
 M.pending = prep({
     find = [[WITH result AS (
-    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits) 
+    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits WHERE enabled = TRUE) 
     SELECT id,description,frequency,elapsed,hasperformed FROM result
     WHERE ( NOT hasperformed ) OR (howOften / 2 < now() - performed) ORDER BY elapsed / frequency
-]]
+DESC NULLS LAST ]]
 },function(p)
     return function()
         local res = p.find:exec()

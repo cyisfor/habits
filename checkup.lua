@@ -26,7 +26,7 @@ function interval(i)
         local result = ''
         local unit
 
-        function addNamed(one,many)
+        local function addNamed(one,many)
             return function(things)
                 if result == nil then 
                     result = ''
@@ -41,8 +41,7 @@ function interval(i)
                 end
             end
         end
-
-        function addSpaced(space)
+        local function addSpaced(space)
             return function(things)
                 if things < 10 then
                     things = space.. things
@@ -50,23 +49,36 @@ function interval(i)
                 result = result .. things
             end
         end
-        addMinutes = addSpaced('0')
-        function addHours(things)        
-            if things == 0 then return end
-            addSpaced(' ')(things) 
-            result = result .. ':'
-        end
-        function produce(i,multiple,add)
+        
+        addMinutes = (function(add)
+            return function(minutes)
+                return ':' .. add(minutes)
+            end
+        end)(addSpaced('0'));
+
+        addHours = (function (add)
+            return function(hours)
+                if hours == 0 then return end
+                return add(hours)
+            end
+        end)(addSpaced(' '));
+
+        local function produce(i,multiple,add)
             things,i = math.modf(i*multiple)
             add(things)
-            return i
+            return i,things
         end
-        i = i / 86400 -- postgresql won give me julian days >:( 
-        i = produce(i,1,addNamed('day'))
+        i = i / 86400 -- postgresql won't give me julian days >:( 
+        i,days = produce(i,1,addNamed('day'))
+        print('days',days)
         if i > 0 then
             i = produce(i,24,addHours)
             if i > 0 then
-                i = produce(i,60,addMinutes)
+                if days > 1 then
+                    i = produce(i,60,addMinutes)
+                elseif days >= 10 then
+                    result = result .. 'h'
+                end
             end
         end
 
@@ -123,10 +135,9 @@ local intervals = (function ()
                 local order = math.random(0,scale)
                 order = 1 - order * (scale * 2 - order) / a
                 -- bias it towards 0
-                order = math.floor(order)
                 assert(order >= 0)
                 assert(order < 1)
-                habit = habits[order*#habits+1] -- 1-based addressing grumble
+                habit = habits[math.floor(order*#habits)+1] -- 1-based addressing grumble
             end
             local entry = labels[habit.id]
             if not entry then return end
@@ -204,7 +215,15 @@ black.alpha = 1
 
 local function raiseWindow()
     local label,habit = intervals.get()
-    local n = notify.Notification.new("Habits",habit.description,"dialog-warning")
+    local n = notify.Notification.new('',habit.description,"dialog-warning")
+    function n:on_closed(e)
+        local reason = n['closed-reason']
+        --print('closed notify',reason)
+        if reason == 2 then
+            window:present()
+            glib.idle_add(glib.PRIORITY_DEFAULT,catch(function() window:grab_focus() end))
+        end
+    end
     n:show()
     return true
 end
@@ -287,7 +306,7 @@ end
     local function start()
         assert(handle == nil)
         handle = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,1,updateIntervals)
-        glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,10,raiseWindow)
+        glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,600,raiseWindow)
     end
     local function stop()
         glib.source_remove(handle)

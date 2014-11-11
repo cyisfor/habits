@@ -2,6 +2,7 @@ create table if not exists habits (
     id serial primary key,
     importance integer,
     description text unique,
+    enabled boolean DEFAULT TRUE,
     howOften interval,
     performed timestamptz);
 
