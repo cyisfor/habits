@@ -26,18 +26,23 @@ function interval(i)
         local result = ''
         local unit
 
+        local function addSpace()
+            if result == nil then
+                result = ''
+            else
+                result = result .. ' '
+            end
+        end
+            
         local function addNamed(one,many)
             return function(things)
-                if result == nil then 
-                    result = ''
-                else
-                    result = result..' '
-                end
+                addSpace()
+                
                 if things == 1 then
                     result = result .. things..' '..one
                 elseif things == 0 then
                 else
-                    result = result .. things..' '..(many or (one..'s'))..' '
+                    result = result .. things..' '..(many or (one..'s'))
                 end
             end
         end
@@ -52,14 +57,16 @@ function interval(i)
         
         addMinutes = (function(add)
             return function(minutes)
-                return ':' .. add(minutes)
+                result = result .. ':'
+                add(minutes)
             end
         end)(addSpaced('0'));
 
         addHours = (function (add)
             return function(hours)
                 if hours == 0 then return end
-                return add(hours)
+                addSpace()
+                add(hours)
             end
         end)(addSpaced(' '));
 
@@ -70,19 +77,18 @@ function interval(i)
         end
         i = i / 86400 -- postgresql won't give me julian days >:( 
         i,days = produce(i,1,addNamed('day'))
-        print('days',days)
         if i > 0 then
-            i = produce(i,24,addHours)
-            if i > 0 then
-                if days > 1 then
+            if days <= 10 then
+                i = produce(i,24,addHours)
+                if days <= 1 then
                     i = produce(i,60,addMinutes)
-                elseif days >= 10 then
+                else
                     result = result .. 'h'
                 end
             end
         end
 
-        return result
+        return result.. ' '
     end)
     if not ok then
         print('I is',i)
