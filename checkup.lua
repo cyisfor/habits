@@ -109,7 +109,7 @@ local notify = gi.require('Notify')
 notify.init("Catchup")
 
 local window = gtk.Window {
-    title = 'Checkup on Friends',
+    title = 'Habit Monitor',
     default_width = 400,
     default_height = 400,
     on_destroy = function()
@@ -221,7 +221,7 @@ black.alpha = 1
 
 local function raiseWindow()
     local label,habit = intervals.get()
-    local n = notify.Notification.new('',habit.description,"dialog-warning")
+    local n = notify.Notification.new('',habit.description,"task-due")
     function n:on_closed(e)
         local reason = n['closed-reason']
         --print('closed notify',reason)

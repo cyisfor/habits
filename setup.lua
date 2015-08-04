@@ -16,8 +16,10 @@ function buildGrid(table)
     grid:attach(gtk.Label{label="id"},0,0,1,1)
     grid:attach(idlabel,1,0,1,1)
     entries['id'] = idlabel
-    for i,name in ipairs(db.fields(table)) do
-        if name ~= 'id' then
+    
+    for n,v in pairs(db.fields(table)) do
+       print(n,v)
+       if false and name ~= 'id' then
             grid:insert_row(i)
             grid:attach(gtk.Label{label=name},0,i,1,1)
             local entry = gtk.Entry()

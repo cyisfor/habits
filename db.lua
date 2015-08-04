@@ -71,6 +71,7 @@ prepctr = 0
 local function prep(stmts,handler)
     local preps = {}
     for n,stmt in pairs(stmts) do
+       print('prepare',n,stmt)
         preps[n] = assert(db:prepare(stmt,'prep'..prepctr),db:error())
         prepctr = prepctr + 1
     end
@@ -129,7 +130,7 @@ end)
 
 M.pending = prep({
     find = [[WITH result AS (
-    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits WHERE enabled = TRUE) 
+    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits WHERE enabled = TRUE)
     SELECT id,description,frequency,elapsed,hasperformed FROM result
     WHERE ( NOT hasperformed ) OR (howOften / 5 < now() - performed) ORDER BY elapsed / frequency
 DESC NULLS LAST ]]
@@ -139,7 +140,7 @@ DESC NULLS LAST ]]
         local habits = {}
         for index,habit in res:rows() do
             habits[#habits+1] = makeHabit(res,habit,#habits+2)
-        end 
+        end
         return function(nothing,last)
             if last then
                 return habits[last.nextone]
@@ -156,7 +157,7 @@ M.close = function()
 end
 
 M.fields = prep({
-    getclass = "SELECT oid FROM pg_class WHERE relname = $1::name AND relkind = $2",
+    getclass = "SELECT oid FROM pg_catalog.pg_class WHERE relname = $1::text AND relkind = $2::\"char\"",
     get = [[
 SELECT attname
 FROM   pg_attribute
@@ -165,14 +166,21 @@ AND    attnum > 0
 AND    NOT attisdropped
 ORDER  BY attnum]]
 },function(p)
-    return function(table)
-        print('searching for public.'..table)
-        local res = p.getclass:exec(table,'r')        
-        if #res == 0 then return {} end
+    return function(able)
+       print('searching for public.('..able..')')
+       local res = checkset(p.getclass:exec(able,'r'))
+        print('uh',res,p.getclass)
+        for oid in res:rows() do
+           print('boop')
+        end
+        if #res == 0 then
+           error("No table found by the relname "..able)
+           return {}
+        end
         local class = res[1].oid
         print('class',class)
         local res = checkset(p.get:exec(class))
-        print('got res',table,tostring(#res))
+        print('got res',able,tostring(#res))
         local ret = {}
         for index,row in res:rows() do
             ret[#ret+1] = row.attname
