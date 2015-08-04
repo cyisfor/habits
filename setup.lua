@@ -9,6 +9,15 @@ w = gtk.Window{
     title="Edit Habits"
 }
 
+local defaults = {
+   importance= '1',
+   enabled= 'TRUE',
+}
+
+local nope = {
+   performed= 1
+}
+
 function buildGrid(table)
     local grid = gtk.Grid()
     local entries = {}
@@ -17,16 +26,21 @@ function buildGrid(table)
     grid:attach(idlabel,1,0,1,1)
     entries['id'] = idlabel
     
-    for n,v in pairs(db.fields(table)) do
-       print(n,v)
-       if false and name ~= 'id' then
+    for i,name in ipairs(db.fields(table)) do
+       print('yay',name)
+       if name ~= 'id' and nope[name] == nil then
             grid:insert_row(i)
             grid:attach(gtk.Label{label=name},0,i,1,1)
             local entry = gtk.Entry()
             grid:attach(entry,1,i,1,1)
             entries[name] = entry
+            if defaults[name] then
+               entry:set_text(defaults[name])
+               print('default',defaults[name])
+            end
         end
     end
+    print('yay',grid)
     return grid, entries
 end
 
@@ -85,7 +99,10 @@ hbox:pack_start(gtk.Button{
     on_clicked = function()
         local sets = {}
         for n,e in pairs(entries) do
-            sets[n] = e:get_text()
+           local v = e:get_text()
+           if v ~= '' then 
+              sets[n] = v
+           end
         end
         
         db:set(sets)

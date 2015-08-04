@@ -170,9 +170,6 @@ ORDER  BY attnum]]
        print('searching for public.('..able..')')
        local res = checkset(p.getclass:exec(able,'r'))
         print('uh',res,p.getclass)
-        for oid in res:rows() do
-           print('boop')
-        end
         if #res == 0 then
            error("No table found by the relname "..able)
            return {}
@@ -190,27 +187,54 @@ ORDER  BY attnum]]
 end)
 
 M.set = function(sets)
-    local id = nil
-    local query = nil
-    local args = {}
-    for n,v in pairs(sets) do
-        if n == 'id' then
-            print('idee')
-            args[#args+1] = tonumber(v)
-            id = #args
-        else
-            args[#args+1] = v
-            if query then
-                query = query .. ' AND '..n..'='..tostring(#args)
-            else
-                query = n..'='..tostring(#args)
-            end
-        end
-    end
-    query = 'UPDATE habits SET '..query..' WHERE id = $'..tostring(id)
-    return prep({set = query},function(p)
-        return p:exec(unpack(args))
-    end)
+   local id = sets.id
+   sets.id = nil
+   local args = {}
+   if id then
+      id = tonumber(id)
+      args[1] = id
+      -- don't add to fields though, because not checking AND id = $...
+   end
+   local query = nil
+   local fields = {}
+   for n,v in pairs(sets) do
+      fields[#fields+1] = n
+      args[#args+1] = v
+   end
+
+   if id == nil then
+      query = 'INSERT INTO habits ('
+      for i,n in ipairs(fields) do
+         if i > 1 then
+            query = query .. ', '
+         end
+         query = query .. n
+      end
+      query = query .. ') VALUES ('
+      for i,n in ipairs(fields) do
+         if i > 1 then
+            query = query .. ', '
+         end
+         query = query .. '$' .. i
+      end
+      query = query .. ') RETURNING id'
+   else
+      for i,n in ipairs(fields) do
+         -- be sure to use i+1 since 1 = id
+         if query then
+            query = query .. ' AND '..n..' = $'..(i+1)
+         else
+            query = n..' = $'..(i+1)
+         end
+      end
+
+      query = 'UPDATE habits SET '..query..' WHERE id = $1'
+   end
+   print(query)
+   error('foo')
+   return prep({set = query},function(p)
+         return p.set:exec(unpack(args))
+   end)
 end
 
 M.find = prep({
