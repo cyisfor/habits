@@ -105,7 +105,7 @@ hbox:pack_start(gtk.Button{
            end
         end
         
-        db:set(sets)
+        db.set(sets)
     end
 },true,false,1)
 

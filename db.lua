@@ -230,10 +230,13 @@ M.set = function(sets)
 
       query = 'UPDATE habits SET '..query..' WHERE id = $1'
    end
-   print(query)
-   error('foo')
+   for i,v in ipairs(args) do
+      print(i,v)
+   end
+   print(#args)
+   print('meep')
    return prep({set = query},function(p)
-         return p.set:exec(unpack(args))
+         return checkset(p.set:exec(unpack(args)))
    end)
 end
 
