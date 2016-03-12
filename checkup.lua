@@ -108,22 +108,13 @@ local notify = gi.require('Notify')
 
 notify.init("Catchup")
 
-local window = gtk.Window {
-    title = 'Habit Monitor',
-    default_width = 400,
-    default_height = 400,
-    on_destroy = function()
-        gtk.main_quit()
-        db.close()
-    end
-}
+local b = gtk.Builder.new_from_file("checkup.glade.xml")
 
+local window = b:get_object('top')
 window:stick()
 
-local vbox = gtk.VBox()
-local grid = gtk.Grid()
-window:add(vbox)
-vbox:pack_start(grid,true,true,1)
+local items = b:get_object('items')
+local view = b:get_object('view')
 
 math.randomseed(os.time())
 local intervals = (function ()
@@ -219,6 +210,15 @@ black.green= 0
 black.blue = 0
 black.alpha = 1
 
+local elapsed = b:get_object('elapsed')
+elapsed:set_cell_data_func(
+   -- why does set_cell_data_func also set the renderer??
+   b:get_object('elapsed_renderer'),
+   function(col,renderer,model,iter,data)
+	  renderer.set_property("foreground-rgba",
+							colorFor(model.get(1)))
+   end,nil,nil)
+
 local function raiseWindow()
     local label,habit = intervals.get()
     local n = notify.Notification.new('',habit.description,"task-due")
@@ -238,25 +238,19 @@ local creating = false
 local function createGrid()
     if creating then glib.source_remove(creating) end
     intervals.clear()
-    grid:forall(gtk.Widget.destroy)
+	store.clear()
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         local i = 0
         for habit in db.pending() do
-            grid:insert_row(i)
-            grid:attach(gtk.Label{label=habit.description},0,i,1,1);
-            (function (habit,i)
-                local intervalLabel = gtk.Label{
-                    label=interval(habit.elapsed),
-                }
-                if habit.elapsed ~= nil then
-                    intervalLabel:override_color(gtk.StateFlags.NORMAL,colorFor((habit.elapsed - habit.frequency) / habit.frequency))
-                else
-                    intervalLabel:override_color(gtk.StateFlags.NORMAL,black)
-                end
-                intervals.set(habit,i,intervalLabel)
-                -- never using contacted in a callback
-                -- no need to save in the environment
-                grid:attach(intervalLabel,1,i,1,1)
+		   iter = store:append()
+		   store:set(iter,
+					 0,habit.description,
+					 1,interval(habit.elapsed),
+					 2,colorFor(habit.elapsed))
+
+		   -- oh god, on clicked in a... in a... uh... liststore...??
+		   -- never using contacted in a callback
+		   -- no need to save in the environment
                 local contact = gtk.Button{label='Did it'}
                 function contact:on_clicked()
                     ok,err = pcall(function() 
