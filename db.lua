@@ -2,7 +2,7 @@ require('luarocks.loader')
 local resource = require('resource')()
 local safeopen = require('sanity.open')
 local pq = require('psql')
-local db = pq.connect "port=5433 dbname=habits"
+local db = pq.connect "port=5433 dbname=habits host=/run"
 local l = require 'lpeg'
 
 local function checkset(res)
