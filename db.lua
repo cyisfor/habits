@@ -86,11 +86,12 @@ M.perform = prep({
     end
 end)
 
-local set_enabled = prep({
+M.set_enabled = prep({
     update = 'UPDATE habits SET enabled = $2 WHERE id = $1'
 },function(p)
     return function(ident,enabled)
-        return p.update:exec(enabled)
+		print('enabeld',enabled,ident)
+        return p.update:exec(ident,enabled)
     end
 end)
 
@@ -112,8 +113,6 @@ DESC NULLS LAST ]]
 		return function()
 		   nindex,row = f(s,index)
 		   if row == nil then return nil end
-		   print(index,'=>',nindex)
-		   print(row.id)
 		   index = nindex
 		   return row.id, row.description, row.frequency, row.elapsed
 		end

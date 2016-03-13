@@ -110,13 +110,8 @@ notify.init("Catchup")
 
 local b = gtk.Builder.new_from_file("checkup.glade.xml").objects
 
-local function complete_row(items, path, iter)
-   local habit = items:get_value(iter, 3).value
-   db.perform(habit)
-end
-
 local items = b.items
-
+local selection = b.selection
 local c = {
    NAME = 1,
    ELAPSED = 2,
@@ -125,18 +120,11 @@ local c = {
    IDENT = 5
 }
 
-function b.didit:on_clicked()
-   selection:selected_foreach(complete_row)
-   update_intervals()
-end
-function b.disabled:on_toggled(path)
-   print('beep',path)
-   local row = items[path]
-   row[c.DISABLED] = not row[c.DISABLED]
-   db.set_enabled(row[c.IDENT],not row[c.DISABLED])
-end
 local window = b.top
 window:stick()
+function window:on_destroy()
+   gtk.main_quit()
+end
 
 math.randomseed(os.time())
 
@@ -177,7 +165,6 @@ local colorFor = (function()
         color.green = g
         color.blue = b
         color.alpha = 1
-		print('color',color)
         return color
     end
 end)()
@@ -207,27 +194,48 @@ local function raiseWindow()
 end
 
 local function update_intervals()
+   print('um')
     if creating then glib.source_remove(creating) end
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
+        creating = nil								   
 		items:clear()
         local i = 0
         for habit,description,frequency,elapsed in db.pending() do
-		   print('BEEP',habit,description,elapsed)
+		   --print('BEEP',habit,description,frequency,elapsed)
 		   local thingy
 		   if elapsed then
 			  thingy = (elapsed - frequency) / frequency
 		   end
 		   items:insert(-1, {
-								  [c.NAME] = description,
-								  [c.ELAPSED] = interval(elapsed),
-								  [c.DISABLED] = false
-								  [c.DANGER] = colorFor(thingy),
-								  [c.IDENT] = habit,
-								  })
+						   [c.NAME] = description,
+						   [c.ELAPSED] = interval(elapsed),
+						   [c.DISABLED] = false,
+						   [c.DANGER] = colorFor(thingy),
+						   [c.IDENT] = habit
+		   })
 		end
         return false
 	end))
+	return true
 end
+local function complete_row(items, path, iter)
+   local habit = items:get_value(iter, c.IDENT-1).value
+   db.perform(habit)
+end
+
+function b.didit:on_clicked()
+   selection:selected_foreach(complete_row)
+   update_intervals()
+end
+function b.disabled:on_toggled(path)
+   -- this is SO stupid about Gtk
+   local path = gtk.TreePath.new_from_string(path)
+   
+   local row = items[path]
+   row[c.DISABLED] = not row[c.DISABLED]
+   db.set_enabled(row[c.IDENT],not row[c.DISABLED])
+end
+
 update_intervals()
 raiseWindow()
 
