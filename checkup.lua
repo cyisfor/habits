@@ -117,6 +117,14 @@ end
 
 local items = b.items
 
+local c = {
+   NAME = 1,
+   ELAPSED = 2,
+   DISABLED = 3,
+   DANGER = 4,
+   IDENT = 5
+}
+
 function b.didit:on_clicked()
    selection:selected_foreach(complete_row)
    update_intervals()
@@ -124,8 +132,8 @@ end
 function b.disabled:on_toggled(path)
    print('beep',path)
    local row = items[path]
-   row[5] = not row[5]
-   db.set_enabled(row[4],not row[5])
+   row[c.DISABLED] = not row[c.DISABLED]
+   db.set_enabled(row[c.IDENT],not row[c.DISABLED])
 end
 local window = b.top
 window:stick()
@@ -184,7 +192,7 @@ local function raiseWindow()
    ok, first = items:get_iter_first()
    if not ok then return end
    local row = items[first]
-   local label,habit = row[1],row[4]
+   local label,habit = row[c.NAME],row[c.IDENT]
    local n = notify.Notification.new('',label,"task-due")
    function n:on_closed(e)
 	  local reason = n['closed-reason']
@@ -203,14 +211,18 @@ local function update_intervals()
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
 		items:clear()
         local i = 0
-        for habit,description,elapsed in db.pending() do
+        for habit,description,frequency,elapsed in db.pending() do
 		   print('BEEP',habit,description,elapsed)
-		   iter = items:append(nil, {
-								  [1] = description,
-								  [2] = interval(elapsed),
-								  [3] = colorFor(elapsed),
-								  [4] = habit,
-								  [5] = false
+		   local thingy
+		   if elapsed then
+			  thingy = (elapsed - frequency) / frequency
+		   end
+		   items:insert(-1, {
+								  [c.NAME] = description,
+								  [c.ELAPSED] = interval(elapsed),
+								  [c.DISABLED] = false
+								  [c.DANGER] = colorFor(thingy),
+								  [c.IDENT] = habit,
 								  })
 		end
         return false

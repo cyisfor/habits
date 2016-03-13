@@ -108,7 +108,15 @@ DESC NULLS LAST ]]
 },function(p)
     return function()
         local res = p.find:exec()
-		return res:rows()
+		local f,s,index = res:rows()
+		return function()
+		   nindex,row = f(s,index)
+		   if row == nil then return nil end
+		   print(index,'=>',nindex)
+		   print(row.id)
+		   index = nindex
+		   return row.id, row.description, row.frequency, row.elapsed
+		end
     end
 end)
 
