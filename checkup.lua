@@ -102,6 +102,7 @@ end
 
 local gi = require('lgi')
 local gtk = gi.require('Gtk')
+local GObject = gi.require('GObject')
 local glib = gi.require('GLib')
 local gdk = gi.require('Gdk')
 local notify = gi.require('Notify')
@@ -201,34 +202,39 @@ local function update_intervals()
    creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         creating = nil								   
         local i = 0
+		local row = items:get_iter_first()
+
         for habit,description,frequency,elapsed in db.pending() do
 		   --print('BEEP',habit,description,frequency,elapsed)
 		   local thingy
-		   if elapsed then
+		   if elapsed ~= nil then
 			  thingy = (elapsed - frequency) / frequency
 		   else
 			  thingy = nil
 		   end
-		   local thingy		   
 		   i = i + 1
-		   print('i',i)
-		   if num_items >= i then
-			  local path = gtk.TreePath.new_from_string(i)
-			  local iter = items:get_iter(path)
-			  assert iter
-			  local olditem = items[iter]
-			  if olditem[c.IDENT] == habit then
-				 olditem[c.ELAPSED] = interval(elapsed)
-				 olditem[c.DANGER] = colorFor(thingy)
-				 olditem[c.DISABLED] = false
-				 olditem[c.NAME] = description
-			  else
-				 olditem[c.NAME] = description
-				 olditem[c.ELAPSED] = interval(elapsed)
-				 olditem[c.DISABLED] = false
-				 olditem[c.DANGER] = colorFor(thingy)
-				 olditem[c.IDENT] = habit
+		   print('i',i)			
+		   print('thingy',thingy)
+		   if row ~= nil then
+			  local function set(column,value)
+				 -- stoled from lgi/override/Gtk.lua
+				 print('value',value)
+				 if not GObject.Value:is_type_of(value) then
+					print('column',column,value)
+					print('type',items:get_column_type(column))
+					gvalue = GObject.Value()
+					gvalue.gtype = items:get_column_type(column)
+					gvalue.value = value
+					value = gvalue
+				 end
+				 items:set_value(row, column-1, value)
 			  end
+			  set(c.IDENT,habit)
+			  set(c.ELAPSED,interval(elapsed))
+			  set(c.DANGER,colorFor(thingy))
+			  set(c.DISABLED,false)
+			  set(c.NAME,name)
+			  next(row)
 		   else
 			  items:insert(-1, {
 							  [c.NAME] = description,
@@ -240,8 +246,11 @@ local function update_intervals()
 			  num_items = num_items + 1
 		   end
 		end
-		for gone = i+1,num_items do
-		   items:remove(gone)
+		local path = gtk.TreePath.new_from_string(i+1)
+		local iter = items:get_iter(path)
+		while iter do
+		   items:remove(iter)
+		   next(iter)
 		end
         return false
 	end))
