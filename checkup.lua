@@ -110,59 +110,31 @@ notify.init("Catchup")
 
 local b = gtk.Builder.new_from_file("checkup.glade.xml")
 
+local function complete_row(items, path, iter)
+   local habit = items:get_value(iter, 3).value
+   db.perform(habit)
+end
+
+b:add_callback_symbol("complete_selected",
+					  function(selection)
+						 selection:selected_foreach(complete_row)
+						 update_intervals()
+					  end)
+b:add_callback_symbol("toggle_enabled",
+					  function(cell, path, model)
+						 local row = model[path]
+						 db.disable(row[4])
+						 row[5] = true
+					  end)
 local window = b:get_object('top')
 window:stick()
+
+b:connect_signals()
 
 local items = b:get_object('items')
 local view = b:get_object('view')
 
 math.randomseed(os.time())
-local intervals = (function ()
-    local labels = {}
-    local habits = {}
-    local scale = 1000
-    local a = scale * scale
-    return setmetatable({
-        set = function(habit,order,value) 
-            labels[habit.id] = {habit,value}
-            habits[order] = habit
-        end,
-        get = function(habit)
-            if habit == nil then
-                local order = math.random(0,scale)
-                order = 1 - order * (scale * 2 - order) / a
-                -- bias it towards 0
-                assert(order >= 0)
-                assert(order < 1)
-                habit = habits[math.floor(order*#habits)+1] -- 1-based addressing grumble
-            end
-            local entry = labels[habit.id]
-            if not entry then return end
-            entry[1] = habit
-            return entry[2],habit
-        end,
-        check = function(habit)
-            local entry = labels[habit.id]
-            if not entry then return false end
-            local oldhabit = entry[1]
-            if oldhabit.dirty then return false end
-            labels[habit.id] = {habit,entry[2]}
-            return true
-        end,
-        clear = function()
-            labels = {}
-        end},        
-    {
-        __call = function()
-            local iter,init,order = ipairs(habits)
-            return function()
-                order,habit = iter(init,order)
-                if order == nil then return nil end
-                return unpack(labels[habit.id])
-            end
-        end
-    })
-end)()
 
 local function catch(sub) 
     return function()
@@ -210,107 +182,57 @@ black.green= 0
 black.blue = 0
 black.alpha = 1
 
-local elapsed = b:get_object('elapsed')
-elapsed:set_cell_data_func(
-   -- why does set_cell_data_func also set the renderer??
-   b:get_object('elapsed_renderer'),
-   function(col,renderer,model,iter,data)
-	  renderer.set_property("foreground-rgba",
-							colorFor(model.get(1)))
-   end,nil,nil)
-
 local function raiseWindow()
-    local label,habit = intervals.get()
-    local n = notify.Notification.new('',habit.description,"task-due")
-    function n:on_closed(e)
-        local reason = n['closed-reason']
-        --print('closed notify',reason)
-        if reason == 2 then
-            window:present()
-            glib.idle_add(glib.PRIORITY_DEFAULT,catch(function() window:grab_focus() end))
-        end
-    end
-    n:show()
-    return true
+   local row = items[1]
+   local label,habit = row[1],row[4]
+   local n = notify.Notification.new('',habit.description,"task-due")
+   function n:on_closed(e)
+	  local reason = n['closed-reason']
+	  --print('closed notify',reason)
+	  if reason == 2 then
+		 window:present()
+		 glib.idle_add(glib.PRIORITY_DEFAULT,catch(function() window:grab_focus() end))
+	  end
+   end
+   n:show()
+   return true
 end
 
-local creating = false
-local function createGrid()
+local function update_intervals()
     if creating then glib.source_remove(creating) end
-    intervals.clear()
-	store.clear()
+    items.clear()
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         local i = 0
-        for habit in db.pending() do
-		   iter = store:append()
-		   store:set(iter,
-					 0,habit.description,
-					 1,interval(habit.elapsed),
-					 2,colorFor(habit.elapsed))
+        for habit,description,elapsed in db.pending() do
+		   iter = items:append(nil, {
+								  [1] = habit.description,
+								  [2] = interval(elapsed),
+								  [3] = colorFor(elapsed),
+								  [4] = habit,
+								  [5] = false
+								  })
+		end
 
-		   -- oh god, on clicked in a... in a... uh... liststore...??
-		   -- never using contacted in a callback
-		   -- no need to save in the environment
-                local contact = gtk.Button{label='Did it'}
-                function contact:on_clicked()
-                    ok,err = pcall(function() 
-                        db.transaction(function()
-                            habit.perform()
-                        end)
-                        intervalLabel:set_text('just now')                        
-                        createGrid()
-                    end)
-                    if not ok then print(err,'err') end
-                    assert(ok,err)
-                end
-                grid:attach(contact,2,i,1,1)
-                local disable = gtk.Button{label='Disable'}
-                function disable:on_clicked()
-                    db.transaction(function()
-                        habit.enabled(false)
-                    end)
-                    glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,createGrid)
-                end 
-                grid:attach(disable,3,i,1,1)
-            end)(habit,i)
-            i = i + 1
-        end
-        grid:show_all()
-        creating = false
         raiseWindow()
         return false
-    end))
+	end))
 end
-createGrid()
-
-local function updateIntervals()
-    for habit in db.pending() do
-        if not intervals.check(habit) then
-            createGrid()
-            return true
-        end
-        label = intervals.get(habit)
-        label:set_text(interval(habit.elapsed))
-        if habit.elapsed ~= nil then
-            label:override_color(gtk.StateFlags.NORMAL,colorFor((habit.elapsed - habit.frequency) / habit.frequency))
-        else
-            label:override_color(gtk.StateFlags.NORMAL,black)
-        end
-    end
-    return true
-end
-
+update_intervals()
 
 (function()
-    local handle
+    local handle,raiser
     local function start()
         assert(handle == nil)
-        handle = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,1,updateIntervals)
-        glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,600,raiseWindow)
+        handle = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,
+										  1,updateIntervals)
+        raiser = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,
+										  600,raiseWindow)
     end
     local function stop()
         glib.source_remove(handle)
         handle = nil
+		glib.source_remove(raiser)
+		raiser = nil
     end
     
     local update = gtk.CheckButton{label="Update Interval"}
