@@ -294,18 +294,12 @@ raiseWindow()
 end)()
 
 assert( b.view:get_rules_hint())
-print(b.view:style_get_property('allow_rules'))
 
 -- stupid CSS crap
 local css = gtk.CssProvider()
 ok, err = css:load_from_data([[
-GtkTreeView {
-  allow-rules: 1;
-  odd-row-color: "#888888";
-  even-row-color: "#FF0000";
-}
-GtkTreeView row:nth-child(odd) {
-  background-color: #888888;
+GtkTreeView row:nth-child(even) {
+  background-color: shade(@base_color,0.9);
 }]])
 print(ok,err)
 local context = b.view:get_style_context()
