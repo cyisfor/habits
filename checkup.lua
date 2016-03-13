@@ -193,30 +193,60 @@ local function raiseWindow()
    return true
 end
 
+local num_items = 0
+
 local function update_intervals()
    print('um')
-    if creating then glib.source_remove(creating) end
-    creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
+   if creating then glib.source_remove(creating) end
+   creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         creating = nil								   
-		items:clear()
         local i = 0
         for habit,description,frequency,elapsed in db.pending() do
 		   --print('BEEP',habit,description,frequency,elapsed)
 		   local thingy
 		   if elapsed then
 			  thingy = (elapsed - frequency) / frequency
+		   else
+			  thingy = nil
 		   end
-		   items:insert(-1, {
-						   [c.NAME] = description,
-						   [c.ELAPSED] = interval(elapsed),
-						   [c.DISABLED] = false,
-						   [c.DANGER] = colorFor(thingy),
-						   [c.IDENT] = habit
-		   })
+		   local thingy		   
+		   i = i + 1
+		   print('i',i)
+		   if num_items >= i then
+			  local path = gtk.TreePath.new_from_string(i)
+			  local iter = items:get_iter(path)
+			  assert iter
+			  local olditem = items[iter]
+			  if olditem[c.IDENT] == habit then
+				 olditem[c.ELAPSED] = interval(elapsed)
+				 olditem[c.DANGER] = colorFor(thingy)
+				 olditem[c.DISABLED] = false
+				 olditem[c.NAME] = description
+			  else
+				 olditem[c.NAME] = description
+				 olditem[c.ELAPSED] = interval(elapsed)
+				 olditem[c.DISABLED] = false
+				 olditem[c.DANGER] = colorFor(thingy)
+				 olditem[c.IDENT] = habit
+			  end
+		   else
+			  items:insert(-1, {
+							  [c.NAME] = description,
+							  [c.ELAPSED] = interval(elapsed),
+							  [c.DISABLED] = false,
+							  [c.DANGER] = colorFor(thingy),
+							  [c.IDENT] = habit
+			  })
+			  num_items = num_items + 1
+		   end
+		end
+		for gone = i+1,num_items do
+		   items:remove(gone)
 		end
         return false
 	end))
-	return true
+   print('ummm')
+   return true
 end
 local function complete_row(items, path, iter)
    local habit = items:get_value(iter, c.IDENT-1).value
@@ -236,7 +266,6 @@ function b.disabled:on_toggled(path)
    db.set_enabled(row[c.IDENT],not row[c.DISABLED])
 end
 
-update_intervals()
 raiseWindow()
 
 ;(function()
@@ -264,6 +293,8 @@ raiseWindow()
         end
     end
     update.active = true
+	update_intervals()
+	start()
 end)()
 
 window:show_all()
