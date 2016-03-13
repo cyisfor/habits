@@ -170,11 +170,27 @@ local colorFor = (function()
     end
 end)()
 
-local black = gdk.RGBA()
-black.red = 0
-black.green= 0
-black.blue = 0
-black.alpha = 1
+local function color(r,g,b,a)
+   local res = gdk.RGBA()
+   if g == nil then
+	  g = r
+   end
+   if b == nil then
+	  b = r
+   end
+   if a == nil then
+	  a = 1.0
+   end
+   res.r = r
+   res.g = g
+   res.b = b
+   res.a = a
+   return res
+end
+   
+local black = color(0)
+local grey = color(0.9)
+local white = color(1.0)
 
 local function raiseWindow()
    ok, first = items:get_iter_first()
@@ -225,12 +241,19 @@ local function update_intervals()
 				 row = nil
 			  end
 		   else
+			  local background
+			  if i % 2 == 0 then
+				 background = white
+			  else
+				 background = grey
+			  end
 			  items:insert(-1, {
 							  [c.NAME] = description,
 							  [c.ELAPSED] = interval(elapsed),
 							  [c.DISABLED] = false,
 							  [c.DANGER] = colorFor(thingy),
-							  [c.IDENT] = habit
+							  [c.IDENT] = habit,
+							  [c.BACKGROUND] = background
 			  })
 		   end
 		end		
@@ -293,17 +316,7 @@ raiseWindow()
 	start()
 end)()
 
-assert( b.view:get_rules_hint())
-
--- stupid CSS crap
-local css = gtk.CssProvider()
-ok, err = css:load_from_data([[
-GtkTreeView row:nth-child(even) {
-  background-color: shade(@base_color,0.9);
-}]])
-print(ok,err)
-local context = b.view:get_style_context()
-context:add_provider(css,gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+local view = b.view
 
 window:show_all()
 gtk.main()
