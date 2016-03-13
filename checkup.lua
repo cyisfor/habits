@@ -108,31 +108,27 @@ local notify = gi.require('Notify')
 
 notify.init("Catchup")
 
-local b = gtk.Builder.new_from_file("checkup.glade.xml")
+local b = gtk.Builder.new_from_file("checkup.glade.xml").objects
 
 local function complete_row(items, path, iter)
    local habit = items:get_value(iter, 3).value
    db.perform(habit)
 end
 
-b:add_callback_symbol("complete_selected",
-					  function(selection)
-						 selection:selected_foreach(complete_row)
-						 update_intervals()
-					  end)
-b:add_callback_symbol("toggle_enabled",
-					  function(cell, path, model)
-						 local row = model[path]
-						 row[5] = not row[5]
-						 db.set_enabled(row[4],not row[5])
-					  end)
-local window = b:get_object('top')
+local items = b.items
+
+function b.didit:on_clicked()
+   selection:selected_foreach(complete_row)
+   update_intervals()
+end
+function b.disabled:on_toggled(path)
+   print('beep',path)
+   local row = items[path]
+   row[5] = not row[5]
+   db.set_enabled(row[4],not row[5])
+end
+local window = b.top
 window:stick()
-
-b:connect_signals()
-
-local items = b:get_object('items')
-local view = b:get_object('view')
 
 math.randomseed(os.time())
 
@@ -153,6 +149,7 @@ end
 
 local colorFor = (function()
     return function(ratio)
+	   if ratio == nil then return black end
         local r,g,b
         b = 0
         if ratio >= 1 then
@@ -172,6 +169,7 @@ local colorFor = (function()
         color.green = g
         color.blue = b
         color.alpha = 1
+		print('color',color)
         return color
     end
 end)()
@@ -183,7 +181,9 @@ black.blue = 0
 black.alpha = 1
 
 local function raiseWindow()
-   local row = items[1]
+   ok, first = items:get_iter_first()
+   if not ok then return end
+   local row = items[first]
    local label,habit = row[1],row[4]
    local n = notify.Notification.new('',label,"task-due")
    function n:on_closed(e)
@@ -201,9 +201,10 @@ end
 local function update_intervals()
     if creating then glib.source_remove(creating) end
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
-		items.clear()
+		items:clear()
         local i = 0
         for habit,description,elapsed in db.pending() do
+		   print('BEEP',habit,description,elapsed)
 		   iter = items:append(nil, {
 								  [1] = description,
 								  [2] = interval(elapsed),
@@ -218,7 +219,7 @@ end
 update_intervals()
 raiseWindow()
 
-(function()
+;(function()
     local handle,raiser
     local function start()
         assert(handle == nil)
@@ -234,8 +235,7 @@ raiseWindow()
 		raiser = nil
     end
     
-    local update = gtk.CheckButton{label="Update Interval"}
-    vbox:pack_start(update,false,true,1)
+    local update = b.update
     function update:on_toggled()
         if update.active then
             start()

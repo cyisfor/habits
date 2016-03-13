@@ -120,7 +120,7 @@ end
 M.fields = prep({
     getclass = "SELECT oid FROM pg_catalog.pg_class WHERE relname = $1::text AND relkind = $2::\"char\"",
     get = [[
-SELECT attname
+SELECT attname::text
 FROM   pg_attribute
 WHERE  attrelid = $1
 AND    attnum > 0
@@ -202,7 +202,7 @@ M.set = function(sets)
 end
 
 M.find = prep({
-    find = 'SELECT * FROM habits WHERE description LIKE $1'
+    find = 'SELECT *,howoften::text as howoften FROM habits WHERE description LIKE $1'
 },function(p)
     return function(search)
         local res = checkset(p.find:exec(search))

@@ -59,6 +59,7 @@ function remakeGrid()
     local table = which:get_text()
     local newgrid
     newgrid, entries = buildGrid(table)
+	assert(entries ~= nil)
     if grid then grid:destroy() end
     grid = newgrid
     vbox:pack_start(grid,true,true,1)
