@@ -194,10 +194,7 @@ local function raiseWindow()
    return true
 end
 
-local num_items = 0
-
 local function update_intervals()
-   print('um')
    if creating then glib.source_remove(creating) end
    creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
         creating = nil								   
@@ -205,7 +202,6 @@ local function update_intervals()
 		local row = items:get_iter_first()
 
         for habit,description,frequency,elapsed in db.pending() do
-		   --print('BEEP',habit,description,frequency,elapsed)
 		   local thingy
 		   if elapsed ~= nil then
 			  thingy = (elapsed - frequency) / frequency
@@ -213,28 +209,21 @@ local function update_intervals()
 			  thingy = nil
 		   end
 		   i = i + 1
-		   print('i',i)			
-		   print('thingy',thingy)
 		   if row ~= nil then
 			  local function set(column,value)
+				 column = column - 1
 				 -- stoled from lgi/override/Gtk.lua
-				 print('value',value)
-				 if not GObject.Value:is_type_of(value) then
-					print('column',column,value)
-					print('type',items:get_column_type(column))
-					gvalue = GObject.Value()
-					gvalue.gtype = items:get_column_type(column)
-					gvalue.value = value
-					value = gvalue
-				 end
-				 items:set_value(row, column-1, value)
+				 value = GObject.Value(items:get_column_type(column),value)
+				 items:set_value(row, column, value)
 			  end
 			  set(c.IDENT,habit)
 			  set(c.ELAPSED,interval(elapsed))
 			  set(c.DANGER,colorFor(thingy))
 			  set(c.DISABLED,false)
-			  set(c.NAME,name)
-			  next(row)
+			  set(c.NAME,description)
+			  if not items:iter_next(row) then
+				 row = nil
+			  end
 		   else
 			  items:insert(-1, {
 							  [c.NAME] = description,
@@ -243,18 +232,16 @@ local function update_intervals()
 							  [c.DANGER] = colorFor(thingy),
 							  [c.IDENT] = habit
 			  })
-			  num_items = num_items + 1
 		   end
-		end
-		local path = gtk.TreePath.new_from_string(i+1)
-		local iter = items:get_iter(path)
-		while iter do
-		   items:remove(iter)
-		   next(iter)
+		end		
+		while row do
+		   items:remove(row)
+		   if not items:iter_next(row) then
+			  break
+		   end
 		end
         return false
 	end))
-   print('ummm')
    return true
 end
 local function complete_row(items, path, iter)
@@ -305,6 +292,24 @@ raiseWindow()
 	update_intervals()
 	start()
 end)()
+
+assert( b.view:get_rules_hint())
+print(b.view:style_get_property('allow_rules'))
+
+-- stupid CSS crap
+local css = gtk.CssProvider()
+ok, err = css:load_from_data([[
+GtkTreeView {
+  allow-rules: 1;
+  odd-row-color: "#888888";
+  even-row-color: "#FF0000";
+}
+GtkTreeView row:nth-child(odd) {
+  background-color: #888888;
+}]])
+print(ok,err)
+local context = b.view:get_style_context()
+context:add_provider(css,gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 window:show_all()
 gtk.main()
