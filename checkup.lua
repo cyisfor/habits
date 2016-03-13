@@ -123,8 +123,8 @@ b:add_callback_symbol("complete_selected",
 b:add_callback_symbol("toggle_enabled",
 					  function(cell, path, model)
 						 local row = model[path]
-						 db.disable(row[4])
-						 row[5] = true
+						 row[5] = not row[5]
+						 db.set_enabled(row[4],not row[5])
 					  end)
 local window = b:get_object('top')
 window:stick()
@@ -185,7 +185,7 @@ black.alpha = 1
 local function raiseWindow()
    local row = items[1]
    local label,habit = row[1],row[4]
-   local n = notify.Notification.new('',habit.description,"task-due")
+   local n = notify.Notification.new('',label,"task-due")
    function n:on_closed(e)
 	  local reason = n['closed-reason']
 	  --print('closed notify',reason)
@@ -200,31 +200,30 @@ end
 
 local function update_intervals()
     if creating then glib.source_remove(creating) end
-    items.clear()
     creating = glib.idle_add(glib.PRIORITY_DEFAULT_IDLE,catch(function()
+		items.clear()
         local i = 0
         for habit,description,elapsed in db.pending() do
 		   iter = items:append(nil, {
-								  [1] = habit.description,
+								  [1] = description,
 								  [2] = interval(elapsed),
 								  [3] = colorFor(elapsed),
 								  [4] = habit,
 								  [5] = false
 								  })
 		end
-
-        raiseWindow()
         return false
 	end))
 end
 update_intervals()
+raiseWindow()
 
 (function()
     local handle,raiser
     local function start()
         assert(handle == nil)
         handle = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,
-										  1,updateIntervals)
+										  1,update_intervals)
         raiser = glib.timeout_add_seconds(glib.PRIORITY_DEFAULT,
 										  600,raiseWindow)
     end

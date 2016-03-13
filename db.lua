@@ -86,68 +86,29 @@ M.perform = prep({
     end
 end)
 
-local setEnabled = prep({
+local set_enabled = prep({
     update = 'UPDATE habits SET enabled = $2 WHERE id = $1'
 },function(p)
-    return function(enabled)
+    return function(ident,enabled)
         return p.update:exec(enabled)
     end
 end)
 
-local function makeHabit(res,tuple,nextone)
-    local habit = {}
-    for n,v in pairs(res:fields()) do
-        habit[n] = tuple[n]
-    end
-    habit.nextone = nextone
-    habit.perform = function()
-        M.perform(habit.id)
-        habit.hasperformed = true
-        habit.dirty = true
-    end
-    habit.enabled = function(enabled)
-        setEnabled(habit.id,enabled)
-    end
-    return habit
-end
-
---[[
-M.waitTime = prep({
-    -- how long until the next action
-    -- how often - time since last
-    find = "SELECT EXTRACT(EPOCH FROM howOften - (now() - performed)) AS whenn FROM habits WHERE whenn > 0 ORDER BY whenn DESC LIMIT 1"
-},function(p)
-    return function()
-        local res = p.find:exec()
-        if #res == 0 then
-            return 0
-        end
-        return res[1].whenn
-    end
-end)
-]]--
-
-
 M.pending = prep({
     find = [[WITH result AS (
-    SELECT id,description,EXTRACT(EPOCH FROM howOften) AS frequency,EXTRACT(EPOCH FROM now() - performed) AS elapsed,performed IS NOT NULL AS hasperformed,howOften,performed FROM habits WHERE enabled = TRUE)
-    SELECT id,description,frequency,elapsed,hasperformed FROM result
+    SELECT id,description,
+EXTRACT(EPOCH FROM howOften) AS frequency,
+EXTRACT(EPOCH FROM now() - performed) AS elapsed,
+performed IS NOT NULL AS hasperformed,
+howOften,
+performed FROM habits WHERE enabled = TRUE)
+    SELECT id,description,frequency,elapsed FROM result
     WHERE ( NOT hasperformed ) OR (howOften / 5 < now() - performed) ORDER BY elapsed / frequency
 DESC NULLS LAST ]]
 },function(p)
     return function()
         local res = p.find:exec()
-        local habits = {}
-        for index,habit in res:rows() do
-            habits[#habits+1] = makeHabit(res,habit,#habits+2)
-        end
-        return function(nothing,last)
-            if last then
-                return habits[last.nextone]
-            else
-                return habits[1]
-            end
-        end
+		return res:rows()
     end
 end)
 
