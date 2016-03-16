@@ -65,8 +65,9 @@ function interval(i)
         addHours = (function (add)
             return function(hours)
                 if hours == 0 then return end
-                addSpace()
-                add(hours)
+--                addSpace()
+--                add(hours)
+				result = result .. hours
             end
         end)(addSpaced(' '));
 
@@ -79,6 +80,9 @@ function interval(i)
         i,days = produce(i,1,addNamed('day'))
         if i > 0 then
             if days <= 10 then
+			   if days > 1 then
+				  addSpace()
+			   end
                 i = produce(i,24,addHours)
                 if days <= 1 then
                     i = produce(i,60,addMinutes)
@@ -113,12 +117,14 @@ local b = gtk.Builder.new_from_file("checkup.glade.xml").objects
 
 local items = b.items
 local selection = b.selection
+assert(selection)
 local c = {
    NAME = 1,
    ELAPSED = 2,
    DISABLED = 3,
    DANGER = 4,
-   IDENT = 5
+   IDENT = 5,
+   BACKGROUND = 6
 }
 
 local window = b.top
@@ -181,15 +187,15 @@ local function color(r,g,b,a)
    if a == nil then
 	  a = 1.0
    end
-   res.r = r
-   res.g = g
-   res.b = b
-   res.a = a
+   res.red = r
+   res.green = g
+   res.blue = b
+   res.alpha = a
    return res
 end
    
 local black = color(0)
-local grey = color(0.9)
+local grey = color(0.95)
 local white = color(1.0)
 
 local function raiseWindow()
@@ -317,6 +323,18 @@ raiseWindow()
 end)()
 
 local view = b.view
+
+local css = gtk.CssProvider()
+ok, err = css:load_from_data([[
+* {
+  font-size: 14pt;
+  font-weight: bold;
+}]])
+print(ok,err)
+local context = window:get_style_context()
+context:add_provider(css,gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+
 
 window:show_all()
 gtk.main()

@@ -104,7 +104,7 @@ performed IS NOT NULL AS hasperformed,
 howOften,
 performed FROM habits WHERE enabled = TRUE)
     SELECT id,description,frequency,elapsed FROM result
-    WHERE ( NOT hasperformed ) OR (howOften / 5 < now() - performed) ORDER BY elapsed / frequency
+    WHERE ( NOT hasperformed ) OR (howOften / 1.5 < now() - performed) ORDER BY elapsed / frequency
 DESC NULLS LAST ]]
 },function(p)
     return function()
