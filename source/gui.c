@@ -4,25 +4,43 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <stdlib.h>
-#include <string.h>
 #include <gtk/gtk.h>
+#include <glade.h>
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 
 
 
-void gui_run (gchar** args, int args_length1);
+void gui_run (void);
 
 
-void gui_run (gchar** args, int args_length1) {
-	GtkWindow* window = NULL;
-	GtkWindow* _tmp0_ = NULL;
-	gtk_init (&args_length1, &args);
-	_tmp0_ = (GtkWindow*) gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	g_object_ref_sink (_tmp0_);
-	window = _tmp0_;
-	_g_object_unref0 (window);
+static gpointer _g_object_ref0 (gpointer self) {
+	return self ? g_object_ref (self) : NULL;
+}
+
+
+void gui_run (void) {
+	GtkBuilder* b = NULL;
+	GtkBuilder* _tmp0_ = NULL;
+	GtkWindow* top = NULL;
+	GObject* _tmp1_ = NULL;
+	GtkWindow* _tmp2_ = NULL;
+	GError * _inner_error_ = NULL;
+	_tmp0_ = gtk_builder_new ();
+	b = _tmp0_;
+	gtk_builder_add_from_string (b, glade, (gsize) glade_size, &_inner_error_);
+	if (G_UNLIKELY (_inner_error_ != NULL)) {
+		_g_object_unref0 (b);
+		g_critical ("file %s: line %d: uncaught error: %s (%s, %d)", __FILE__, __LINE__, _inner_error_->message, g_quark_to_string (_inner_error_->domain), _inner_error_->code);
+		g_clear_error (&_inner_error_);
+		return;
+	}
+	_tmp1_ = gtk_builder_get_object (b, "top");
+	_tmp2_ = _g_object_ref0 (G_TYPE_CHECK_INSTANCE_TYPE (_tmp1_, gtk_window_get_type ()) ? ((GtkWindow*) _tmp1_) : NULL);
+	top = _tmp2_;
+	gtk_main ();
+	_g_object_unref0 (top);
+	_g_object_unref0 (b);
 }
 
 

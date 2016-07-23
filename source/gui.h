@@ -1,1 +1,1 @@
-const char* glade = "foop";
+#define GLADE "foop"
