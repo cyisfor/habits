@@ -1,6 +1,10 @@
 #include "db.h"
 #include "checkup_glade.h"
 
+#include <glib.h>
+#include <gtk/gtk.h>
+
+
 enum Column {
 	EHUNNO,
 	NAME,
