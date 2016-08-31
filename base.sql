@@ -1,41 +1,27 @@
 create table if not exists habits (
-    id serial primary key,
-    importance integer,
-    description text unique,
-    enabled boolean DEFAULT TRUE,
-    howOften interval,
-    performed INTEGER -- in units of clock_getres(CLOCK_REALTIME) 
+    id INTEGER primary key,
+    importance integer NOT NULL,
+    description text NOT NULL,
+    enabled boolean NOT NULL DEFAULT 1,
+    howOften INTEGER NOT NULL, -- in milliseconds
+		last_performed INTEGER -- in milliseconds since the epoch
 );
+
+create unique index unique_description on habits(description);
 
 create table if not exists history (
     id serial primary key,
     habit integer references habits(id),
-    performed timestamptz DEFAULT now());
+    performed INTEGER NOT NULL); -- when it was performed, each time new
 
-create index byperformed on history(performed);
+create unique index IF NOT EXISTS by_performed on history(performed);
 
-create or replace function findHabit(_habit_description text) RETURNS integer as $$
-DECLARE
-_habit integer;
-BEGIN
-    LOOP
-        SELECT id INTO _habit FROM habits WHERE description = _habit_description;
-        IF found THEN
-            RETURN _habit;
-        END IF;
-        BEGIN
-            INSERT INTO habits (description) VALUES (_description) RETURNING id INTO _habit;
-            RETURN _habit;
-        EXCEPTION WHEN unique_violation THEN
-            -- try selecting again
-        END;
-    END LOOP;
-END;
-$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER IF NOT EXISTS add_history AFTER UPDATE ON habits
+  BEGIN
+		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed)
+	END;
 
-CREATE OR REPLACE FUNCTION perform(_habit integer) RETURNS void AS $$
-BEGIN
-    UPDATE habits SET performed = now() WHERE id = _habit;
-    INSERT INTO history (habit) VALUES (_habit);
-END;
-$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER IF NOT EXISTS insert_add_history AFTER INSERT ON habits
+  BEGIN
+		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed)
+	END;
