@@ -1,5 +1,6 @@
 #include "db.h"
 #include "checkup_glade.h"
+#include "litlen.h"
 
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -77,10 +78,10 @@ int main(int argc, char *argv[])
 		}
 	}
 			
-	void poke_me() {
+	int poke_me(void* udata) {
 		GtkTreeIter iter;
 		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
-			return;
+			return G_SOURCE_CONTINUE;
 		GValue label, ident;
 		gtk_tree_model_get_value(items,
 														 &iter,
@@ -96,13 +97,14 @@ int main(int argc, char *argv[])
 			 "task-due");
 		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
 		gtk_widget_show_all(GTK_WIDGET(n));
+		return G_SOURCE_CONTINUE;
 	}
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);
 	}
 
-	void update_intervals() {
+	int update_intervals(void* udata) {
 		GtkTreeIter row;
 		bool has_row = gtk_tree_model_get_iter_first(items, &row);
 		struct db_habit habit;
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
 													 DANGER, &thingy,
 													 -1);
 			}
+			return G_SOURCE_CONTINUE;
 		}
 		// take off expired items at the end
 		while(has_row) {
@@ -148,14 +151,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	void complete_row(GtkTreeModel *model,
+	int complete_row(GtkTreeModel *model,
 										GtkTreePath *path,
 										GtkTreeIter *iter,
 										gpointer data) {
 		GValue ident;
 		gtk_tree_model_get_value(model, iter, EHUNNO, &ident);
-		assert(G_HOLDS_INT64(ident));
-		db_perform(g_value_get_int64(ident));
+		assert(G_VALUE_HOLDS_INT64(&ident));
+		db_perform(g_value_get_int64(&ident));
+		return TRUE;
 	}
 
 	void on_didit() {
@@ -172,8 +176,8 @@ int main(int argc, char *argv[])
 														 &iter,
 														 DISABLED,
 														 &disabledv);
-		assert(G_HOLDS_BOOL(disabledv));
-		gboolean disabled = g_value_get_bool(disabledv);
+		assert(G_VALUE_HOLDS_BOOLEAN(&disabledv) == TRUE);
+		gboolean disabled = g_value_get_boolean(&disabledv);
 		gtk_list_store_insert_with_values(GTK_LIST_STORE(items),
 															&iter,
 															DISABLED,
@@ -184,19 +188,19 @@ int main(int argc, char *argv[])
 														 &iter,
 														 IDENT,
 														 &ident);
-		assert(G_HOLDS_INT64(ident));
-		db_set_enabled(g_value_get_int64(ident), disabled == FALSE);
+		assert(G_VALUE_HOLDS_INT64(&ident));
+		db_set_enabled(g_value_get_int64(&ident), disabled == FALSE);
 	}
-
+	guint handle, poker;
 	void start() {
-		handle = g_timeout_add_seconds(PRIORITY_DEFAULT, 1, update_intervals);
-		poker = g_timeout_add_seconds(PRIORITY_DEFAULT, 600, poke_me);
+		handle = g_timeout_add_seconds(1, update_intervals);
+		poker = g_timeout_add_seconds(600, poke_me);
 	}
 	void stop() {
 		g_source_remove(handle);
-		g_source_remove(raiser);
+		g_source_remove(poker);
 		handle = -1;
-		raiser = -1;
+		poker = -1;
 	}
 
 	void on_update_toggled() {
@@ -222,7 +226,7 @@ int main(int argc, char *argv[])
 	assert(ok == TRUE);
 	gtk_style_context_add_provider(gtk_widget_get_style_context(top),
 																 css,
-																 STYLE_PROVIDER_PRIORITY_APPLICATION);
+																 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	gtk_main();
 	db_done();
 	return 0;
