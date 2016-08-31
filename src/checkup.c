@@ -3,6 +3,7 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <libnotify/notify.h>
 
 
 enum Column {
@@ -48,11 +49,11 @@ int main(int argc, char *argv[])
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
-	#define GET(type,conv,name) \
+	#define GETFULL(type,conv,name) \
 		type* name = conv(gtk_builder_get_object(b, #name))
-	#define GET(name) GET(GtkWidget, GTK_WIDGET, name)
+	#define GET(name) GETFULL(GtkWidget, GTK_WIDGET, name)
 	GET(top);
-	GET(GtkTreeModel,GTK_TREE_MODEL,items);
+	GETFULL(GtkTreeModel,GTK_TREE_MODEL,items);
 	GET(selection);
 	GET(didit);
 	GET(disabled);
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
 	GET(view);
 
 	gtk_window_stick(GTK_WINDOW(top));
-	g_signal_connect(top,"destroy",gtk_main_quit);
+	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
 
 	void on_notify_closed(NotifyNotification* n, gpointer udata) {
 		gint reason;
@@ -87,8 +88,11 @@ int main(int argc, char *argv[])
 														 &iter,
 														 1,
 														 &ident);
-		NotifyNotification* n = notify_notification_new("", label,"task-due");
-		g_signal_connect(n, "closed", on_notify_closed, NULL);
+		NotifyNotification* n = notify_notification_new
+			("",
+			 g_value_get_string(&label),
+			 "task-due");
+		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
 		gtk_widget_show_all(n);
 	}
 

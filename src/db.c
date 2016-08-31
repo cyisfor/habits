@@ -1,6 +1,7 @@
 #include "db.h"
 #include <sqlite3.h>
 #include <error.h>
+#include <stdbool.h>
 
 sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
@@ -10,7 +11,7 @@ sqlite3* db = NULL;
 
 static sqlite3_int64 clock_now() {
 	struct timespec now;
-	clock_gettime(CLOCK_REALTIME,&now);
+	clock_gettime(CLOCK_REALTIME_COARSE,&now);
 	return now.tv_sec * 1000L + now.tv_nsec / 1000000;
 }
 
@@ -30,7 +31,7 @@ void db_set_enabled(long ident, bool enabled) {
 	check(res);
 }
 
-bool db_next_pending(habit* self) {
+bool db_next_pending(struct habit* self) {
 	int res = sqlite3_step(next_pending_stmt);
 	if(res == SQLITE_DONE) {
 		sqlite3_reset(next_pending_stmt);
