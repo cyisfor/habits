@@ -1,13 +1,19 @@
 #include "db.h"
-#include "pq.h"
+#include <sqlite3.h>
 #include <error.h>
+
+sqlite3_stmt *set_enabled_stmt = NULL,
+	*next_pending_stmt = NULL,
+	*perform_stmt = NULL;
+
+sqlite3* db = NULL;
 
 static void check(int res) {
 	if(res == SQLITE_DONE || res == SQLITE_ROW) return;
-	error(sqlite3_errcode(pq_db),0,"%d(%s): %s",
-				sqlite3_errcode(pq_db),
+	error(sqlite3_errcode(db),0,"%d(%s): %s",
+				sqlite3_errcode(db),
 				sqlite3_errstr(res),
-				sqlite3_errmsg(pq_db));
+				sqlite3_errmsg(db));
 }
 
 void db_set_enabled(long ident, bool enabled) {
@@ -43,10 +49,19 @@ void db_perform(sqlite_int64 ident) {
 void db_done(void) {
 	sqlite3_finalize(set_enabled_stmt);
 	sqlite3_finalize(next_pending_stmt);
-	sqlite3_finalize();...
-	check(sqlite3_close(pq_db));
+	sqlite3_finalize(perform_stmt);
+	check(sqlite3_close(db));
 }
 
 void db_init(void) {
-	pq_init();
+	check(sqlite3_open("habits.sqlite",&db));
+	int res = sqlite3_exec(db, base_sql, NULL, NULL, &errmsg);
+	if(res != 0) {
+		error(1,res,errmsg);
+	}
+	#define PREPARE(what,sql) \
+		sqlite3_prepare_v2(db, LITLEN(sql), what, NULL)
+	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
+	PREPARE(next_pending_stmt,
+					"SELECT id,description,
 }

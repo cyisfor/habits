@@ -3,7 +3,7 @@ create table if not exists habits (
     importance integer NOT NULL,
     description text NOT NULL,
     enabled boolean NOT NULL DEFAULT 1,
-    howOften INTEGER NOT NULL, -- in milliseconds
+    frequency INTEGER NOT NULL, -- in milliseconds
 		last_performed INTEGER -- in milliseconds since the epoch
 );
 
