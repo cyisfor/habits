@@ -4,7 +4,8 @@ create table if not exists habits (
     description text unique,
     enabled boolean DEFAULT TRUE,
     howOften interval,
-    performed timestamptz);
+    performed INTEGER -- in units of clock_getres(CLOCK_REALTIME) 
+);
 
 create table if not exists history (
     id serial primary key,

@@ -50,7 +50,7 @@
                 <property name="search_column">0</property>
                 <property name="enable_grid_lines">horizontal</property>
                 <child internal-child="selection">
-                  <object class="GtkTreeSelection" id="treeview-selection">
+                  <object class="GtkTreeSelection" id="selection">
                     <property name="mode">multiple</property>
                   </object>
                 </child>
@@ -74,9 +74,7 @@
                     <property name="title" translatable="yes">elapsed</property>
                     <property name="expand">True</property>
                     <child>
-                      <object class="GtkCellRendererText" id="elapsed_renderer">
-                        <property name="stretch">expanded</property>
-                      </object>
+                      <object class="GtkCellRendererText" id="elapsed_renderer"/>
                       <attributes>
                         <attribute name="text">1</attribute>
                         <attribute name="foreground-rgba">3</attribute>
@@ -114,20 +112,13 @@
             <property name="can_focus">False</property>
             <child>
               <object class="GtkCheckButton" id="update">
+                <property name="label" translatable="yes">Update Interval</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
+                <property name="xalign">0</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="halign">start</property>
-                    <property name="margin_left">3</property>
-                    <property name="label" translatable="yes">Update Interval</property>
-                  </object>
-                </child>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -142,7 +133,7 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="image">image1</property>
-                <signal name="clicked" handler="complete_selected" object="treeview-selection1" swapped="no"/>
+                <signal name="clicked" handler="complete_selected" object="selection" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
