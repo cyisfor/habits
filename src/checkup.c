@@ -4,6 +4,7 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <libnotify/notify.h>
+#include <assert.h>
 
 
 enum Column {
@@ -39,6 +40,7 @@ static void color_for(GdkRGBA* dest, float ratio) {
 COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
+COLOR(background, 0.9, 0.9, 0.9, 1.0);
 
 int main(int argc, char *argv[])
 {
@@ -93,7 +95,11 @@ int main(int argc, char *argv[])
 			 g_value_get_string(&label),
 			 "task-due");
 		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
-		gtk_widget_show_all(n);
+		gtk_widget_show_all(GTK_WIDGET(n));
+	}
+
+	void interval_stringify(gchar** res, sqlite3_int64 interval) {
+		*res = g_strdup_printf("%ld",interval);
 	}
 
 	void update_intervals() {
@@ -101,11 +107,12 @@ int main(int argc, char *argv[])
 		bool has_row = gtk_tree_model_get_iter_first(items, &row);
 		struct db_habit habit;
 		GdkRGBA thingy;
-		while(db_pending(&habit)) {
+		while(db_next_pending(&habit)) {
 			gchar* elapsed = NULL;
 			interval_stringify(&elapsed, habit.elapsed);
-			if(habit.has_elapsed) {
-				color_for(&thingy, (habit.elapsed - frequency) / frequency);
+			if(habit.has_performed) {
+				color_for(&thingy, (habit.elapsed - habit.frequency) /
+									habit.frequency);
 			}
 			
 			if(has_row) {
@@ -118,16 +125,17 @@ int main(int argc, char *argv[])
 													 -1);
 				has_row = gtk_tree_model_iter_next(items,&row);
 			} else {
-				gtk_list_store_set_values(GTK_LIST_STORE(items),
+				gtk_list_store_insert_with_values(GTK_LIST_STORE(items),
 																	&row,
 																	-1,
 																	IDENT, habit.ident,
 																	DISABLED, FALSE,
+																	ELAPSED, elapsed,
 																	BACKGROUND, background,
 																	NAME, habit.description,
 																	-1);
 			}
-			if(habit.has_elapsed) {
+			if(habit.has_performed) {
 				gtk_list_store_set(GTK_LIST_STORE(items),
 													 &row,
 													 DANGER, &thingy,
@@ -166,7 +174,7 @@ int main(int argc, char *argv[])
 														 &disabledv);
 		assert(G_HOLDS_BOOL(disabledv));
 		gboolean disabled = g_value_get_bool(disabledv);
-		gtk_list_store_set_values(GTK_LIST_STORE(items),
+		gtk_list_store_insert_with_values(GTK_LIST_STORE(items),
 															&iter,
 															DISABLED,
 															disabled == FALSE ? TRUE : FALSE,

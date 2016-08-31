@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 
-struct habit {
+struct db_habit {
 	sqlite3_int64 ident;
 	sqlite3_int64 elapsed;
 	const char* description;
@@ -12,7 +12,7 @@ struct habit {
 
 void db_set_enabled(long ident, bool enabled);
 
-bool db_next_pending(struct habit* self);
+bool db_next_pending(struct db_habit* self);
 
 void db_perform(sqlite_int64 ident);
 
