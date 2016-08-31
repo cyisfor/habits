@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 	puts("\x1b]0;checkup\a");
 	fflush(stdout);
 	gtk_init(&argc,&argv);
+	db_init();
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
@@ -211,5 +212,6 @@ int main(int argc, char *argv[])
 																 css,
 																 STYLE_PROVIDER_PRIORITY_APPLICATION);
 	gtk_main();
+	db_done();
 	return 0;
 }
