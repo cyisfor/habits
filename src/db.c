@@ -1,10 +1,14 @@
 #include "db.h"
 #include "litlen.h"
+#include "base_sql.h"
 
 #include <sqlite3.h>
 #include <error.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <stdlib.h> // NULL
+#include <time.h> // clock_*
+
 sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
 	*perform_stmt = NULL;
@@ -41,10 +45,10 @@ bool db_next_pending(struct db_habit* self) {
 	}
 	check(res);
 	assert(res == SQLITE_ROW);
-	self->id = sqlite3_column_int64(next_pending_stmt, 0);
+	self->ident = sqlite3_column_int64(next_pending_stmt, 0);
 	self->description = sqlite3_column_text(next_pending_stmt, 1);
 	self->frequency = sqlite3_column_double(next_pending_stmt, 2);
-	self->has_performed = sqlite3_column_bool(next_pending_stmt, 3);
+	self->has_performed = sqlite3_column_int(next_pending_stmt, 3) == 0;
 	if(self->has_performed) {
 		self->elapsed = clock_now() - sqlite3_column_int64(next_pending_stmt, 4);
 	}
@@ -68,6 +72,7 @@ void db_done(void) {
 
 void db_init(void) {
 	check(sqlite3_open("habits.sqlite",&db));
+	const char* errmsg = NULL;
 	int res = sqlite3_exec(db, base_sql, NULL, NULL, &errmsg);
 	if(res != 0) {
 		error(1,res,errmsg);

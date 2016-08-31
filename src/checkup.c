@@ -6,6 +6,7 @@
 #include <gtk/gtk.h>
 #include <libnotify/notify.h>
 #include <assert.h>
+#include <error.h>
 
 
 enum Column {
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
 
 	void on_didit() {
 		gtk_tree_model_foreach(items, complete_row, NULL);
-		update_intervals();
+		update_intervals(NULL);
 	}
 	void disabled_toggled(gchar* spath) {
 		GtkTreePath* path = gtk_tree_path_new_from_string(spath);
@@ -193,8 +194,8 @@ int main(int argc, char *argv[])
 	}
 	guint handle, poker;
 	void start() {
-		handle = g_timeout_add_seconds(1, update_intervals);
-		poker = g_timeout_add_seconds(600, poke_me);
+		handle = g_timeout_add_seconds(1, update_intervals, NULL);
+		poker = g_timeout_add_seconds(600, poke_me, NULL);
 	}
 	void stop() {
 		g_source_remove(handle);
@@ -210,12 +211,13 @@ int main(int argc, char *argv[])
 			stop();
 		}
 	}
-	gtk_toggle_button_set_active(update, TRUE);
-	update_intervals();
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(update), TRUE);
+	update_intervals(NULL);
 	start();
 	g_signal_connect(update, "toggled", on_update_toggled, NULL);
 
 	GtkCssProvider* css = gtk_css_provider_new();
+	GError* error = NULL;
 	gboolean ok =
 		gtk_css_provider_load_from_data(css,
 																	LITLEN("* { "
