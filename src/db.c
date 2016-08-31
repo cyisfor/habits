@@ -22,11 +22,12 @@ static sqlite3_int64 clock_now() {
 }
 
 static void check(int res) {
-	if(res == SQLITE_DONE || res == SQLITE_ROW) return;
-	error(sqlite3_errcode(db),0,"%d(%s): %s",
+	if(res == SQLITE_DONE || res == SQLITE_ROW || res == SQLITE_OK) return;
+	error(0,sqlite3_errcode(db),"%d(%s): %s",
 				sqlite3_errcode(db),
 				sqlite3_errstr(res),
 				sqlite3_errmsg(db));
+	abort();
 }
 
 void db_set_enabled(long ident, bool enabled) {
@@ -71,16 +72,18 @@ void db_done(void) {
 }
 
 void db_init(void) {
-	check(sqlite3_open("habits.sqlite",&db));
-	const char* errmsg = NULL;
+	assert(0==sqlite3_open("habits.sqlite",&db));
+	assert(db!= NULL);
+	char* errmsg = NULL;
 	int res = sqlite3_exec(db, base_sql, NULL, NULL, &errmsg);
 	if(res != 0) {
 		error(1,res,errmsg);
 	}
 	#define PREPARE(what,sql) \
-		sqlite3_prepare_v2(db, LITLEN(sql), what, NULL)
+		check(sqlite3_prepare_v2(db, LITLEN(sql), &what, NULL));
 	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
 	PREPARE(next_pending_stmt,
-					"SELECT id,description,frequency,last_performed IS NOT NULL,last_performed FROM habits WHERE enabled = TRUE ORDER BY elapsed IS NOT NULL, frequency IS NOT NULL, elapsed / frequency DESC");
-	PREPARE(perform_stmt, "UPDATE habits SET performed = ?2 WHERE id = ?1");
+					"SELECT id,description,frequency,last_performed IS NOT NULL,last_performed FROM habits WHERE enabled ORDER BY elapsed IS NOT NULL, frequency IS NOT NULL, elapsed / frequency DESC");
+	// XXX: must set elapsed to custom `now` - last_performed for query ordering
+	PREPARE(perform_stmt, "UPDATE habits SET last_performed = ?2 WHERE id = ?1");
 }

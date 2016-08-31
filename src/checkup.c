@@ -58,9 +58,9 @@ int main(int argc, char *argv[])
 	#define GET(name) GETFULL(GtkWidget, GTK_WIDGET, name)
 	GET(top);
 	GETFULL(GtkTreeModel,GTK_TREE_MODEL,items);
-	GET(selection);
+	GETFULL(GtkTreeSelection,GTK_TREE_SELECTION,selection);
 	GET(didit);
-	GET(disabled);
+	GETFULL(GtkCellRendererToggle,GTK_CELL_RENDERER_TOGGLE,disabled);
 	GET(update);
 	GET(view);
 
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
 																	&error);
 	assert(ok == TRUE);
 	gtk_style_context_add_provider(gtk_widget_get_style_context(top),
-																 css,
+																 GTK_STYLE_PROVIDER(css),
 																 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	gtk_main();
 	db_done();

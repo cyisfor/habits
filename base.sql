@@ -7,7 +7,7 @@ create table if not exists habits (
 		last_performed INTEGER -- in milliseconds since the epoch
 );
 
-create unique index unique_description on habits(description);
+create unique index if not exists unique_description on habits(description);
 
 create table if not exists history (
     id serial primary key,
@@ -18,10 +18,10 @@ create unique index IF NOT EXISTS by_performed on history(performed);
 
 CREATE TRIGGER IF NOT EXISTS add_history AFTER UPDATE ON habits
   BEGIN
-		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed)
+		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed);
 	END;
 
 CREATE TRIGGER IF NOT EXISTS insert_add_history AFTER INSERT ON habits
   BEGIN
-		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed)
+		INSERT INTO history (habit,performed) VALUES (NEW.id, NEW.last_performed);
 	END;
