@@ -8,6 +8,12 @@ sqlite3_stmt *set_enabled_stmt = NULL,
 
 sqlite3* db = NULL;
 
+static sqlite3_int64 clock_now() {
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME,&now);
+	return now.tv_sec * 1000L + now.tv_nsec / 1000000;
+}
+
 static void check(int res) {
 	if(res == SQLITE_DONE || res == SQLITE_ROW) return;
 	error(sqlite3_errcode(db),0,"%d(%s): %s",
@@ -35,12 +41,14 @@ bool db_next_pending(habit* self) {
 	self->id = sqlite3_column_int64(next_pending_stmt, 0);
 	self->description = sqlite3_column_text(next_pending_stmt, 1);
 	self->frequency = sqlite3_column_double(next_pending_stmt, 2);
-	self->elapsed = clock_now() - sqlite3_column_int64(next_pending_stmt, 3);
+	self->has_performed = sqlite3_column_bool(next_pending_stmt, 3);
+	self->elapsed = clock_now() - sqlite3_column_int64(next_pending_stmt, 4);
 	return true;
 }
 
 void db_perform(sqlite_int64 ident) {
 	sqlite3_bind_int64(perform_stmt,1,ident);
+	sqlite3_bind_int64(perform_stmt,2,clock_now());
 	int res = sqlite3_step(perform_stmt);
 	sqlite3_reset(perform_stmt);
 	check(res);
@@ -63,5 +71,6 @@ void db_init(void) {
 		sqlite3_prepare_v2(db, LITLEN(sql), what, NULL)
 	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
 	PREPARE(next_pending_stmt,
-					"SELECT id,description,
+					"SELECT id,description,frequency,last_performed IS NOT NULL,last_performed FROM habits WHERE enabled = TRUE ORDER BY elapsed IS NOT NULL, frequency IS NOT NULL, elapsed / frequency DESC");
+	PREPARE(perform_stmt, "UPDATE habits SET performed = ?2 WHERE id = ?1");
 }
