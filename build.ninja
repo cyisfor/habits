@@ -1,4 +1,4 @@
-ldflags=`pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -g
+ldflags=`pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -lm -g
 cflags=`pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -Igen/ -fdiagnostics-color=always
 
 rule program

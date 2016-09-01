@@ -1,10 +1,12 @@
 #include "new_habit.h"
+#include "db.h"
 
 #include "new_habit.glade.h"
 
 #include <gtk/gtk.h>
 #include <math.h>
 #include <stdlib.h> // strtol
+#include <assert.h>
 
 #define NAMES X(top) X(importance) X(description) X(frequency) X(freqadj) X(readable_frequency) X(create_habit)
 
@@ -86,26 +88,26 @@ static void update_readable_frequency(void) {
 	gtk_entry_set_text(GTK_ENTRY(stuff.readable_frequency),buf);
 }
 
-static void adjust_frequency(void* udata) {
+static gboolean adjust_frequency(void* udata) {
 	stuff.updating_importance = 0;
 	gdouble spot = stretch_along(gtk_adjustment_get_value(stuff.freqadjderp));
 	static char micros[0x1000];
 	ssize_t amt = snprintf(micros,0x1000,"%ld\n",(long)spot);
 	gtk_entry_set_text(GTK_ENTRY(stuff.frequency), micros);
 	update_readable_frequency();
+	return G_SOURCE_REMOVE;
 }
 
 static gboolean do_create(GtkButton* btn, void* udata) {
 	char* err = NULL;
-	long frequency = strtol(gtk_entry_get_text(stuff.frequency),10,&err);
+	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(stuff.frequency)),
+													&err, 10);
 	assert(err == NULL || *err == '\0');
 	if(frequency == 0) frequency = 600;
-	double importance = strtod(gtk_adjustment_get_value(stuff.importance),
-														 &err);
-	assert(err == NULL || *err == '\0');
-	bool created =
-		db_create_habit(gtk_entry_get_text(stuff.description),
-									gtk_entry_get_text_length(stuff.description),
+	double importance = gtk_adjustment_get_value(stuff.importancederp);
+	gboolean created =
+		db_create_habit(gtk_entry_get_text(GTK_ENTRY(stuff.description)),
+									gtk_entry_get_text_length(GTK_ENTRY(stuff.description)),
 									importance,frequency);
 
 	GtkWidget* dialog = gtk_message_dialog_new
@@ -116,7 +118,7 @@ static gboolean do_create(GtkButton* btn, void* udata) {
 		 "Habit was %s: %s!",
 		 created ?
 		 "created" : "updated",
-		 gtk_entry_get_text(stuff.description));
+		 gtk_entry_get_text(GTK_ENTRY(stuff.description)));
 	gtk_widget_show_all(dialog);
 	gtk_widget_hide(stuff.top);
 }
@@ -126,9 +128,9 @@ prepare_adjust_frequency (GtkRange     *range,
 													 GtkScrollType scroll,
 													 gdouble       value,
 													 gpointer      user_data) {
-	if(stuff.updating_importance) return;
+	if(stuff.updating_importance) return FALSE;
 	stuff.updating_importance =
-		g_timeout_add(G_PRIORITY_DEFAULT, 100,adjust_frequency,NULL);
+		g_timeout_add(100,adjust_frequency,NULL);
 }
 
 void setup_new(void) {
@@ -143,15 +145,17 @@ void setup_new(void) {
 		stuff.freqadjderp = gtk_range_get_adjustment(GTK_RANGE(stuff.freqadj));
 	stuff.importancederp = gtk_range_get_adjustment
 		(GTK_RANGE(stuff.importance));
-	g_signal_connect(stuff.create_habit, "clicked", do_create, NULL);
-	g_signal_connect(stuff.freqadj, "change-value", prepare_adjust_frequency, NULL);
+	g_signal_connect(stuff.create_habit, "clicked",
+									 G_CALLBACK(do_create), NULL);
+	g_signal_connect(stuff.freqadj, "change-value",
+									 G_CALLBACK(prepare_adjust_frequency), NULL);
 }
 
 
 void new_habit_show(void) {
-	gtk_entry_set_text(GTK_TEXT(stuff.frequency),"86400");
+	gtk_entry_set_text(GTK_ENTRY(stuff.frequency),"86400");
 	update_readable_frequency();
-	gtk_entry_set_text(GTK_TEXT(stuff.description),"");
+	gtk_entry_set_text(GTK_ENTRY(stuff.description),"");
 	gtk_adjustment_set_value(stuff.importancederp, 0.5);
 	gtk_adjustment_set_value(stuff.freqadjderp, starting_point);
 	gtk_widget_show_all(stuff.top);

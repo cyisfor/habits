@@ -97,6 +97,9 @@ void db_done(void) {
 	sqlite3_finalize(set_enabled_stmt);
 	sqlite3_finalize(next_pending_stmt);
 	sqlite3_finalize(perform_stmt);
+	sqlite3_finalize(create_find_stmt);
+	sqlite3_finalize(create_update_stmt);
+	sqlite3_finalize(create_insert_stmt);
 	check(sqlite3_close(db));
 }
 
