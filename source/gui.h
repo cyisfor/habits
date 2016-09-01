@@ -1,1 +1,0 @@
-#define GLADE "foop"
