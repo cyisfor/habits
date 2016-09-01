@@ -23,7 +23,7 @@
       <!-- column-name danger -->
       <column type="GdkRGBA"/>
       <!-- column-name ident -->
-      <column type="guint64"/>
+      <column type="gint64"/>
       <!-- column-name background -->
       <column type="GdkRGBA"/>
     </columns>

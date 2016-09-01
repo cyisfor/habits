@@ -92,7 +92,8 @@ int main(int argc, char *argv[])
 		GtkTreeIter iter;
 		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
 			return G_SOURCE_CONTINUE;
-		GValue label, ident;
+		GValue label = {},
+			ident = {};
 		gtk_tree_model_get_value(items,
 														 &iter,
 														 0,
@@ -136,7 +137,7 @@ int main(int argc, char *argv[])
 													 IDENT, habit.ident,
 													 ELAPSED, elapsed,
 													 DISABLED, FALSE,
-													 NAME, habit.description
+													 NAME, habit.description,
 													 -1);
 				has_row = gtk_tree_model_iter_next(items,&row);
 			} else {
@@ -179,7 +180,7 @@ int main(int argc, char *argv[])
 										GtkTreePath *path,
 										GtkTreeIter *iter,
 										gpointer data) {
-		GValue ident;
+		GValue ident = {};
 		gtk_tree_model_get_value(model, iter, IDENT, &ident);
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_perform(g_value_get_int64(&ident));
@@ -190,24 +191,27 @@ int main(int argc, char *argv[])
 		gtk_tree_model_foreach(items, complete_row, NULL);
 		update_intervals(NULL);
 	}
-	void disabled_toggled(gchar* spath) {
+	void
+		disabled_toggled (GtkCellRendererToggle *cell_renderer,
+											gchar                 *spath,
+											gpointer               user_data) {
 		GtkTreePath* path = gtk_tree_path_new_from_string(spath);
 		GtkTreeIter iter;
 		assert(TRUE==gtk_tree_model_get_iter(items, &iter, path));
 		gtk_tree_path_free(path);
-		GValue disabledv;
+		GValue disabledv = {};
 		gtk_tree_model_get_value(items,
 														 &iter,
 														 DISABLED,
 														 &disabledv);
 		assert(G_VALUE_HOLDS_BOOLEAN(&disabledv) == TRUE);
 		gboolean disabled = g_value_get_boolean(&disabledv);
-		gtk_list_store_insert_with_values(GTK_LIST_STORE(items),
+		gtk_list_store_set(GTK_LIST_STORE(items),
 															&iter,
 															DISABLED,
 															disabled == FALSE ? TRUE : FALSE,
 															-1);
-		GValue ident;
+		GValue ident = {};
 		gtk_tree_model_get_value(items,
 														 &iter,
 														 IDENT,
@@ -215,6 +219,8 @@ int main(int argc, char *argv[])
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_set_enabled(g_value_get_int64(&ident), disabled == FALSE);
 	}
+	g_signal_connect(disabled,"toggled",G_CALLBACK(disabled_toggled),NULL);
+	
 	void start() {
 		if(!updater)
 			updater = g_timeout_add_seconds(1, update_intervals, NULL);
