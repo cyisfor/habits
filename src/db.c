@@ -1,6 +1,7 @@
 #include "db.h"
 #include "litlen.h"
-#include "base_sql.h"
+#include "base.sql.h"
+#include "pending.sql.h"
 
 #include <sqlite3.h>
 #include <error.h>
@@ -71,6 +72,10 @@ void db_done(void) {
 	check(sqlite3_close(db));
 }
 
+void sqlite_millinow(sqlite3_context* ctx, int narg, sqlite3_value** args) {
+	sqlite3_result_int64(ctx, clock_now());
+}
+
 void db_init(void) {
 	assert(0==sqlite3_open("habits.sqlite",&db));
 	assert(db!= NULL);
@@ -79,11 +84,14 @@ void db_init(void) {
 	if(res != 0) {
 		error(1,res,errmsg);
 	}
+
+	sqlite3_create_function(db, "millinow", 0, SQLITE_UTF8, NULL,
+													sqlite_millinow, NULL, NULL);
+	
 	#define PREPARE(what,sql) \
 		check(sqlite3_prepare_v2(db, LITLEN(sql), &what, NULL));
 	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
-	PREPARE(next_pending_stmt,
-					"SELECT id,description,frequency,last_performed IS NOT NULL,last_performed FROM habits WHERE enabled ORDER BY elapsed IS NOT NULL, frequency IS NOT NULL, elapsed / frequency DESC");
+	PREPARE(next_pending_stmt,pending_sql);
 	// XXX: must set elapsed to custom `now` - last_performed for query ordering
 	PREPARE(perform_stmt, "UPDATE habits SET last_performed = ?2 WHERE id = ?1");
 }
