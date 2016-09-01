@@ -44,7 +44,6 @@ static void color_for(GdkRGBA* dest, float ratio) {
 COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
-COLOR(background, 0.9, 0.9, 0.9, 1.0);
 
 int main(int argc, char *argv[])
 {
@@ -82,8 +81,14 @@ int main(int argc, char *argv[])
 			gtk_widget_grab_focus(top);
 		}
 	}
-			
+
+	guint updater = 0,
+		poker = 0;
+
+
+	
 	int poke_me(void* udata) {
+		poker = 0;
 		GtkTreeIter iter;
 		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
 			return G_SOURCE_CONTINUE;
@@ -109,11 +114,14 @@ int main(int argc, char *argv[])
 		*res = g_strdup_printf("%ld",interval);
 	}
 
+
 	int update_intervals(void* udata) {
+		updater = 0;
 		GtkTreeIter row;
 		bool has_row = gtk_tree_model_get_iter_first(items, &row);
 		struct db_habit habit;
 		GdkRGBA thingy;
+		bool odd = false;
 		while(db_next_pending(&habit)) {
 			const char* elapsed = "never";
 			if(habit.has_performed) {
@@ -132,15 +140,23 @@ int main(int argc, char *argv[])
 													 -1);
 				has_row = gtk_tree_model_iter_next(items,&row);
 			} else {
-				gtk_list_store_insert_with_values(GTK_LIST_STORE(items),
-																	&row,
-																	-1,
-																	IDENT, habit.ident,
-																	DISABLED, FALSE,
-																	ELAPSED, elapsed,
-																	BACKGROUND, &background,
-																	NAME, habit.description,
-																	-1);
+				GdkRGBA* background;
+				if(odd) {
+					background = &grey;
+				} else {
+					background = &white;
+				}
+				odd = !odd;
+				gtk_list_store_insert_with_values
+					(GTK_LIST_STORE(items),
+					 &row,
+					 -1,
+					 IDENT, habit.ident,
+					 DISABLED, FALSE,
+					 ELAPSED, elapsed,
+					 BACKGROUND, background,
+					 NAME, habit.description,
+					 -1);
 			}
 			if(habit.has_performed) {
 				gtk_list_store_set(GTK_LIST_STORE(items),
@@ -148,12 +164,15 @@ int main(int argc, char *argv[])
 													 DANGER, &thingy,
 													 -1);
 			}
-			return G_SOURCE_CONTINUE;
 		}
 		// take off expired items at the end
-		while(has_row) {
-			has_row = gtk_list_store_remove(GTK_LIST_STORE(items), &row);
+		if(has_row) {
+			has_row = gtk_tree_model_iter_next(items, &row);
+			while(has_row) {
+				has_row = gtk_list_store_remove(GTK_LIST_STORE(items), &row);
+			}
 		}
+		return G_SOURCE_CONTINUE;
 	}
 
 	int complete_row(GtkTreeModel *model,
@@ -196,17 +215,17 @@ int main(int argc, char *argv[])
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_set_enabled(g_value_get_int64(&ident), disabled == FALSE);
 	}
-	guint handle = 0,
-		poker = 0;
 	void start() {
-		handle = g_timeout_add_seconds(1, update_intervals, NULL);
-		poker = g_timeout_add_seconds(600, poke_me, NULL);
+		if(!updater)
+			updater = g_timeout_add_seconds(1, update_intervals, NULL);
+		if(!poker)
+			poker = g_timeout_add_seconds(600, poke_me, NULL);
 	}
 	void stop() {
-		if(handle) g_source_remove(handle);
+		if(updater) g_source_remove(updater);
 		if(poker) g_source_remove(poker);
-		handle = -1;
-		poker = -1;
+		updater = 0;
+		poker = 0;
 	}
 
 	void on_update_toggled() {
