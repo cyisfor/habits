@@ -51,8 +51,10 @@ static gdouble stretch_along(gdouble spot) {
 static void update_readable_frequency(void) {
 	char buf[0x1000];
 	ssize_t offset = 0;
+	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(stuff.frequency)),
 													&err, 10);
+	assert(err == NULL || *err == '\0');
 	gdouble spot = frequency;
 	gboolean started = FALSE;
 	if(spot >= 86400 * 30) {
@@ -158,7 +160,7 @@ static void on_text_freq(GtkEditable* thing, gpointer udata) {
 	if(stuff.typing) {
 		g_source_remove(stuff.typing);
 	}
-	stuff.typing = gtk_timeout_add(500,update_text_freq,NULL);
+	stuff.typing = g_timeout_add(500,update_text_freq,NULL);
 }
 
 void new_habit_init(void) {
@@ -178,7 +180,8 @@ void new_habit_init(void) {
 									 G_CALLBACK(do_create), NULL);
 	g_signal_connect(stuff.freqadj, "change-value",
 									 G_CALLBACK(prepare_adjust_frequency), NULL);
-	g_signal_connect(stuff.frequency, "changed", on_text_freq,NULL;)
+	g_signal_connect(stuff.frequency, "changed",
+									 G_CALLBACK(on_text_freq),NULL);
 	g_signal_connect(stuff.top, "delete-event",G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 }
 

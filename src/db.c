@@ -125,6 +125,7 @@ void db_init(void) {
 	PREPARE(next_pending_stmt,pending_sql);
 	// XXX: must set elapsed to custom `now` - last_performed for query ordering
 	PREPARE(perform_stmt, "UPDATE habits SET last_performed = ?2 WHERE id = ?1");
+	PREPARE(history_stmt, "INSERT INTO HISTORY (habit,performed) VALUES (?,?)");
 
 	PREPARE(create_find_stmt,"SELECT id FROM habits WHERE description = ?");
 	PREPARE(create_update_stmt,"UPDATE habits SET importance = ?, frequency = ? WHERE id = ?");
