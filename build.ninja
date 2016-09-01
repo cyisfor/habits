@@ -1,5 +1,9 @@
-ldflags=`pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -lm -g
-cflags=`pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -Igen/ -fdiagnostics-color=always
+ldflags = `pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -lm -g
+cflags = `pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -O2 -Igen/ -fdiagnostics-color=always
+pack = ./data_to_header_string
+
+rule run
+  command = ./$in > $out
 
 rule program
   command = gcc $cflags -o $out $in $ldflags
@@ -8,7 +12,7 @@ rule object
   command = gcc $cflags -c -o $out $in
 
 rule resource
-  command = name=$name /home/code/data_to_header_string/pack $in >$out
+  command = name=$name $pack/pack $in >$out
 
 build obj/new_habit.o: object src/new_habit.c | gen/new_habit.glade.h
 build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
@@ -16,12 +20,16 @@ build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h
 build obj/readable_interval.o: object src/readable_interval.c
 build gen/base.sql.h: resource sql/base.sql
   name = base_sql
-build gen/pending.sql.h: resource sql/pending.sql
+build gen/pending.sql.h: resource sql/pending.sql | $pack/pack
   name = pending_sql
-build gen/checkup.glade.h: resource checkup.glade.xml
+build gen/checkup.glade.h: resource checkup.glade.xml | $pack/pack
   name = checkup_glade
-build gen/new_habit.glade.h: resource new_habit.glade.xml
+build gen/new_habit.glade.h: resource new_habit.glade.xml | $pack/pack
   name = new_habit_glade
+
+build $pack/pack: program $pack/main.c | $pack/specialescapes.c
+build $pack/specialescapes.c: run $pack/make_specialescapes
+build $pack/make_specialescapes: program $pack/make_specialescapes.c
 
 build checkup: program obj/checkup.o obj/db.o obj/new_habit.o obj/readable_interval.o
 
