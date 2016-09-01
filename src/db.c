@@ -82,9 +82,9 @@ bool db_next_pending(struct db_habit* self) {
 	self->ident = sqlite3_column_int64(next_pending_stmt, 0);
 	self->description = sqlite3_column_text(next_pending_stmt, 1);
 	self->frequency = sqlite3_column_double(next_pending_stmt, 2);
-	self->has_performed = sqlite3_column_int(next_pending_stmt, 3) == 0;
+	self->has_performed = sqlite3_column_int(next_pending_stmt, 3) != 0;
 	if(self->has_performed) {
-		self->elapsed = clock_now() - sqlite3_column_int64(next_pending_stmt, 4);
+		self->elapsed = sqlite3_column_int64(next_pending_stmt, 4);
 	}
 	return true;
 }
@@ -149,7 +149,4 @@ void db_init(void) {
 	PREPARE(create_insert_stmt,"INSERT INTO habits (importance,frequency,description) VALUES (?,?,?)");
 	PREPARE(begin,"BEGIN");
 	PREPARE(commit,"COMMIT");
-	// derp
-	assert(true==db_create_habit(LITLEN("Replace Toothbrush"),
-										 1.0, 7776000));
 }

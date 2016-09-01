@@ -1,4 +1,4 @@
-SELECT id,description,frequency,last_performed,
+SELECT id,description,frequency,
 			 last_performed IS NOT NULL AS has_performed,
 			 millinow()-last_performed AS elapsed 
 		FROM habits WHERE enabled AND

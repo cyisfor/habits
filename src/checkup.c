@@ -13,7 +13,6 @@
 
 
 enum Column {
-	EHUNNO,
 	NAME,
 	ELAPSED,
 	DISABLED,
@@ -116,8 +115,9 @@ int main(int argc, char *argv[])
 		struct db_habit habit;
 		GdkRGBA thingy;
 		while(db_next_pending(&habit)) {
-			const char* elapsed = readable_interval(habit.elapsed / 1000);
+			const char* elapsed = "never";
 			if(habit.has_performed) {
+				elapsed = readable_interval(habit.elapsed / 1000);
 				color_for(&thingy, (habit.elapsed - habit.frequency) /
 									habit.frequency);
 			}
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 																	IDENT, habit.ident,
 																	DISABLED, FALSE,
 																	ELAPSED, elapsed,
-																	BACKGROUND, background,
+																	BACKGROUND, &background,
 																	NAME, habit.description,
 																	-1);
 			}
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 										GtkTreeIter *iter,
 										gpointer data) {
 		GValue ident;
-		gtk_tree_model_get_value(model, iter, EHUNNO, &ident);
+		gtk_tree_model_get_value(model, iter, IDENT, &ident);
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_perform(g_value_get_int64(&ident));
 		return TRUE;
@@ -196,14 +196,15 @@ int main(int argc, char *argv[])
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_set_enabled(g_value_get_int64(&ident), disabled == FALSE);
 	}
-	guint handle, poker;
+	guint handle = 0,
+		poker = 0;
 	void start() {
 		handle = g_timeout_add_seconds(1, update_intervals, NULL);
 		poker = g_timeout_add_seconds(600, poke_me, NULL);
 	}
 	void stop() {
-		g_source_remove(handle);
-		g_source_remove(poker);
+		if(handle) g_source_remove(handle);
+		if(poker) g_source_remove(poker);
 		handle = -1;
 		poker = -1;
 	}

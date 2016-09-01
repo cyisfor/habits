@@ -13,6 +13,7 @@ rule resource
 build obj/new_habit.o: object src/new_habit.c | gen/new_habit.glade.h
 build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
 build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h
+build obj/readable_interval.o: object src/readable_interval.c
 build gen/base.sql.h: resource sql/base.sql
   name = base_sql
 build gen/pending.sql.h: resource sql/pending.sql
@@ -22,6 +23,6 @@ build gen/checkup.glade.h: resource checkup.glade.xml
 build gen/new_habit.glade.h: resource new_habit.glade.xml
   name = new_habit_glade
 
-build checkup: program obj/checkup.o obj/db.o obj/new_habit.o
+build checkup: program obj/checkup.o obj/db.o obj/new_habit.o obj/readable_interval.o
 
 default checkup
