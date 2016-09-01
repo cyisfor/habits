@@ -53,7 +53,7 @@ static void update_readable_frequency(void) {
 	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(stuff.frequency)),
 													&err, 10);
-	assert(err == NULL || *err == '\0');
+	if(err != NULL && *err != '\0') return;
 
 	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),
 										 readable_interval(frequency, false));
@@ -83,14 +83,15 @@ static gboolean do_create(GtkButton* btn, void* udata) {
 									importance,frequency);
 
 	GtkWidget* dialog = gtk_message_dialog_new
-		(NULL,
-		 0,
+		(GTK_WINDOW(stuff.top),
+		 GTK_DIALOG_DESTROY_WITH_PARENT,
 		 GTK_MESSAGE_INFO,
 		 GTK_BUTTONS_OK,
 		 "Habit was %s: %s!",
 		 created ?
 		 "created" : "updated",
 		 gtk_entry_get_text(GTK_ENTRY(stuff.description)));
+	g_signal_connect(dialog,"response",G_CALLBACK(gtk_widget_destroy),NULL);
 	gtk_widget_show_all(dialog);
 	gtk_widget_hide(stuff.top);
 }

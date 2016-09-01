@@ -30,45 +30,47 @@ static sqlite3_int64 clock_now() {
 	return now.tv_sec * 1000L + now.tv_nsec / 1000000;
 }
 
-static void check(int res) {
+static void check(const char* file, int line, int res) {
 	if(res == SQLITE_DONE || res == SQLITE_ROW || res == SQLITE_OK) return;
-	error(0,sqlite3_errcode(db),"%d(%s): %s",
+	error(0,res,"%s:%d %d(%s)",
+				file,line,
 				sqlite3_errcode(db),
-				sqlite3_errstr(res),
-				sqlite3_errmsg(db));
+				sqlite3_errstr(res));
 	abort();
 }
 
+#define CHECK(a) check(__FILE__, __LINE__, (a))
+
 bool db_create_habit(const char* desc, ssize_t desclen,
 										 double importance, sqlite3_int64 frequency) {
-	check(sqlite3_bind_text(create_find_stmt, 1, desc, desclen, NULL));
+	CHECK(sqlite3_bind_text(create_find_stmt, 1, desc, desclen, NULL));
 	int res = sqlite3_step(create_find_stmt);
 	if(res == SQLITE_ROW) {
 		sqlite3_int64 ident = sqlite3_column_int64(create_find_stmt, 0);
-		check(sqlite3_bind_double(create_update_stmt, 1, importance));
-		check(sqlite3_bind_int64(create_update_stmt, 2, frequency));
-		check(sqlite3_bind_int64(create_update_stmt, 3, ident));
+		CHECK(sqlite3_bind_double(create_update_stmt, 1, importance));
+		CHECK(sqlite3_bind_int64(create_update_stmt, 2, frequency));
+		CHECK(sqlite3_bind_int64(create_update_stmt, 3, ident));
 		res = sqlite3_step(create_update_stmt);
-		check(sqlite3_reset(create_update_stmt));
-		check(res);
+		CHECK(sqlite3_reset(create_update_stmt));
+		CHECK(res);
 		return false;
 	}
-	check(res);
-	check(sqlite3_bind_double(create_insert_stmt, 1, importance));
-	check(sqlite3_bind_int64(create_insert_stmt, 2, frequency));
-	check(sqlite3_bind_text(create_insert_stmt, 3, desc, desclen, NULL));
+	CHECK(res);
+	CHECK(sqlite3_bind_double(create_insert_stmt, 1, importance));
+	CHECK(sqlite3_bind_int64(create_insert_stmt, 2, frequency));
+	CHECK(sqlite3_bind_text(create_insert_stmt, 3, desc, desclen, NULL));
 	res = sqlite3_step(create_insert_stmt);
-	check(sqlite3_reset(create_insert_stmt));
-	check(res);
+	CHECK(sqlite3_reset(create_insert_stmt));
+	CHECK(res);
 	return true;
 }	
 
 void db_set_enabled(long ident, bool enabled) {
-	check(sqlite3_bind_int(set_enabled_stmt, 1, ident));
-	check(sqlite3_bind_int(set_enabled_stmt, 2, enabled ? 1 : 0));
+	CHECK(sqlite3_bind_int(set_enabled_stmt, 1, ident));
+	CHECK(sqlite3_bind_int(set_enabled_stmt, 2, enabled ? 1 : 0));
 	int res = sqlite3_step(set_enabled_stmt);
-	check(sqlite3_reset(set_enabled_stmt));
-	check(res);
+	CHECK(sqlite3_reset(set_enabled_stmt));
+	CHECK(res);
 }
 
 bool db_next_pending(struct db_habit* self) {
@@ -77,7 +79,7 @@ bool db_next_pending(struct db_habit* self) {
 		sqlite3_reset(next_pending_stmt);
 		return false;
 	}
-	check(res);
+	CHECK(res);
 	assert(res == SQLITE_ROW);
 	self->ident = sqlite3_column_int64(next_pending_stmt, 0);
 	self->description = sqlite3_column_text(next_pending_stmt, 1);
@@ -97,12 +99,12 @@ void db_perform(sqlite_int64 ident) {
 	sqlite3_bind_int64(perform_stmt,2,now);
 	int res = sqlite3_step(perform_stmt);
 	sqlite3_reset(perform_stmt);
-	check(res);
+	CHECK(res);
 	sqlite3_bind_int64(history_stmt,1,ident);
 	sqlite3_bind_int64(history_stmt,2,now);
 	res = sqlite3_step(history_stmt);
 	sqlite3_reset(history_stmt);
-	check(res);
+	CHECK(res);
 	sqlite3_step(commit);
 	sqlite3_reset(commit);
 }
@@ -117,7 +119,7 @@ void db_done(void) {
 	sqlite3_finalize(create_insert_stmt);
 	sqlite3_finalize(begin);
 	sqlite3_finalize(commit);
-	check(sqlite3_close(db));
+	CHECK(sqlite3_close(db));
 }
 
 void sqlite_millinow(sqlite3_context* ctx, int narg, sqlite3_value** args) {
@@ -138,7 +140,7 @@ void db_init(void) {
 													sqlite_millinow, NULL, NULL);
 	
 	#define PREPARE(what,sql) \
-		check(sqlite3_prepare_v2(db, LITLEN(sql), &what, NULL));
+		CHECK(sqlite3_prepare_v2(db, LITLEN(sql), &what, NULL));
 	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
 	PREPARE(next_pending_stmt,pending_sql);
 	// XXX: must set elapsed to custom `now` - last_performed for query ordering
