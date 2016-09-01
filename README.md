@@ -2,7 +2,7 @@ This is a little thing that shows what habits you’re trying to do on a regular
 
 tl;dr add habits with New, and give an interval in seconds (converted to milliseconds in the db). They pop up as bright red, and you go do them. Then you select them, and click “Did It.” Yay, you completed your checklist! It’ll remain empty until another one of your habits starts coming close to due again.
 
-Building it, you’ll need gtk-3, libnotify, sqlite3, 
+Building it, you’ll need gtk-3, libnotify, sqlite3, pkg-config, gcc, ninja, and probably Linux but I ain’t selling anything.
 
 The habits are ordered according to which is the most “urgent” which is to say check out sql/pending.sql, but basically it’s the ratio of time elapsed since you last did it, to the frequency at which you do it. So once a day, it goes to the top after 2 days, then once an hour passes it in 2 hours.
 
