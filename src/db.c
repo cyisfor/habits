@@ -127,6 +127,7 @@ void sqlite_millinow(sqlite3_context* ctx, int narg, sqlite3_value** args) {
 void db_init(void) {
 	assert(0==sqlite3_open("habits.sqlite",&db));
 	assert(db!= NULL);
+	sqlite3_busy_timeout(db, 10000);
 	char* errmsg = NULL;
 	int res = sqlite3_exec(db, base_sql, NULL, NULL, &errmsg);
 	if(res != 0) {

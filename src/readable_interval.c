@@ -3,55 +3,38 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-const char* readable_interval(long seconds) {
+const char* readable_interval(long seconds, bool shorten) {
 	static char buf[0x1000];
 	
 	ssize_t offset = 0;
 	double spot = seconds;
 	bool started = false;
-	if(spot >= 86400 * 30) {
-		int months = (int)(spot / (86400 * 30));
-		spot = spot - months * 86400 * 30;
-		offset += snprintf(buf+offset,0x1000-offset,
-											 "%d month%s",months,months > 1 ? "s" : "");
-		started = true;
+#define REDUCE(unit, name, letter)																			\
+	if(spot >= (unit)) {																									\
+		int name ## _s = (int)(spot / (unit));															\
+		spot = spot - name ## _s * (unit);																	\
+		if(shorten) {																												\
+			offset += snprintf(buf+offset,0x1000-offset,"%d" letter,name ## _s);	\
+		} else {																														\
+			if(started == true) {																							\
+				buf[offset++] = ' ';																						\
+			} else {																													\
+				started = true;																									\
+			}																																	\
+			if(months == 1) {																									\
+				memcpy(buf+offset,LITLEN("1 " #name));													\
+				buf += sizeof("1 " #name)-1;																		\
+			} else {																													\
+				offset += snprintf(buf+offset,0x1000-offset,										\
+													 "%d " #name "s", name ## _s);								\
+			}																																	\
+		}																																		\
 	}
-	if(spot >= 86400) {
-		int days = (int)(spot / 86400);
-		spot = spot - days * 86400;
-		if(started == true)
-			buf[offset++] = ' ';
-		started = true;
-		offset += snprintf(buf+offset,0x1000-offset,
-											 "%d day%s",days,days > 1 ? "s" : "");
-	}
-	if(spot >= 3600) {
-		int hours = (int)(spot / 3600);
-		spot = spot - hours * 3600;
-		if(started == true)
-			buf[offset++] = ' ';
-		started = true;
-		offset += snprintf(buf+offset,0x1000-offset,
-											 "%d hour%s",hours,hours > 1 ? "s" : "");
-	}
-	if(spot >= 60) {
-		int minutes = (int)(spot / 60);
-		spot = spot - minutes * 60;
-		if(started == true)
-			buf[offset++] = ' ';
-		started = true;
-		offset += snprintf(buf+offset,0x1000-offset,"%d minute%s",
-											 minutes,minutes > 1 ? "s" : "");
-	}
-	if(spot >= 1) {
-		int seconds = (int)spot;
-		// spot = spot - seconds;
-		if(started == true)
-			buf[offset++] = ' ';
-		//started = true;
-		offset += snprintf(buf+offset,0x1000-offset,"%d second%s",
-											 seconds,seconds > 1 ? "s" : "");
-	}
+	REDUCE(86400*30,month,"m");
+	REDUCE(86400,day,"d");
+	REDUCE(3600,hour,"h");
+	REDUCE(60,minute,"m");
+	REDUCE(1,second,"s");
 	buf[offset+1] = '\0';
 
 	return buf;

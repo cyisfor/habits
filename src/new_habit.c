@@ -42,7 +42,7 @@ static void calc_constants(void) {
 	const int top = 86400 * 30 + 1;
 	a = log(top - bottom + 1) / log(c);
 	b = bottom - 1;
-	starting_point = log(86400-b)/a;
+	starting_point = log(86400-b)/a/log(c);
 }
 
 static gdouble stretch_along(gdouble spot) {

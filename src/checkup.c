@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	gtk_init(&argc,&argv);
 	db_init();
 	new_habit_init();
-	
+
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
 	#define GETFULL(type,conv,name) \
@@ -64,9 +64,9 @@ int main(int argc, char *argv[])
 	GET(didit);
 	GETFULL(GtkCellRendererToggle,GTK_CELL_RENDERER_TOGGLE,disabled);
 	GET(update);
-	GET(view);	
+	GET(view);
 	GET(open_new);
-	
+
 	gtk_window_stick(GTK_WINDOW(top));
 	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
 
@@ -82,13 +82,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	guint updater = 0,
-		poker = 0;
-
-
-	
 	int poke_me(void* udata) {
-		poker = 0;
 		GtkTreeIter iter;
 		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
 			return G_SOURCE_CONTINUE;
@@ -117,7 +111,7 @@ int main(int argc, char *argv[])
 
 
 	int update_intervals(void* udata) {
-		updater = 0;
+		puts("update_intervals");
 		GtkTreeIter row;
 		bool has_row = gtk_tree_model_get_iter_first(items, &row);
 		struct db_habit habit;
@@ -130,7 +124,7 @@ int main(int argc, char *argv[])
 				color_for(&thingy, (habit.elapsed - habit.frequency) /
 									habit.frequency);
 			}
-			
+
 			if(has_row) {
 				gtk_list_store_set(GTK_LIST_STORE(items),
 													 &row,
@@ -168,7 +162,7 @@ int main(int argc, char *argv[])
 		}
 		// take off expired items at the end
 		if(has_row) {
-			has_row = gtk_tree_model_iter_next(items, &row);
+			//has_row = gtk_tree_model_iter_next(items, &row);
 			while(has_row) {
 				has_row = gtk_list_store_remove(GTK_LIST_STORE(items), &row);
 			}
@@ -205,11 +199,12 @@ int main(int argc, char *argv[])
 														 DISABLED,
 														 &disabledv);
 		assert(G_VALUE_HOLDS_BOOLEAN(&disabledv) == TRUE);
-		gboolean disabled = g_value_get_boolean(&disabledv);
+		gboolean disabled = g_value_get_boolean(&disabledv)
+			 == FALSE ? TRUE : FALSE; // toggle it
 		gtk_list_store_set(GTK_LIST_STORE(items),
 															&iter,
 															DISABLED,
-															disabled == FALSE ? TRUE : FALSE,
+															disabled,
 															-1);
 		GValue ident = {};
 		gtk_tree_model_get_value(items,
@@ -220,14 +215,19 @@ int main(int argc, char *argv[])
 		db_set_enabled(g_value_get_int64(&ident), disabled == FALSE);
 	}
 	g_signal_connect(disabled,"toggled",G_CALLBACK(disabled_toggled),NULL);
-	
+
+	guint updater = 0,
+		poker = 0;
+
 	void start() {
-		if(!updater)
+		printf("start %d %d\n",updater,poker);
+		if(updater==0)
 			updater = g_timeout_add_seconds(1, update_intervals, NULL);
-		if(!poker)
+		if(poker==0)
 			poker = g_timeout_add_seconds(600, poke_me, NULL);
 	}
 	void stop() {
+		printf("stop %d %d\n",updater,poker);
 		if(updater) g_source_remove(updater);
 		if(poker) g_source_remove(poker);
 		updater = 0;
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 
 	new_habit_init();
 	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),NULL);
-	
+
 	gtk_main();
 	db_done();
 	return 0;
