@@ -17,6 +17,7 @@ struct Stuff {
 	guint updating_importance;
 	GtkAdjustment* freqadjderp;
 	GtkAdjustment* importancederp;
+	gboolean typing;
 } stuff = {}; 
 
 double a,b;
@@ -37,7 +38,7 @@ static void calc_constants(void) {
 	x = log(y-b) / a
 */
 	const int bottom = 300;
-	const int top = 86400 * 30 + 30;
+	const int top = 86400 * 30 + 1;
 	a = log(top - bottom + 1) / log(c);
 	b = bottom - 1;
 	starting_point = log(86400-b)/a;
@@ -50,18 +51,20 @@ static gdouble stretch_along(gdouble spot) {
 static void update_readable_frequency(void) {
 	char buf[0x1000];
 	ssize_t offset = 0;
-	gdouble spot = stretch_along(gtk_adjustment_get_value(stuff.freqadjderp));
+	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(stuff.frequency)),
+													&err, 10);
+	gdouble spot = frequency;
 	gboolean started = FALSE;
 	if(spot >= 86400 * 30) {
 		int months = (int)(spot / (86400 * 30));
-		spot = spot - months;
+		spot = spot - months * 86400 * 30;
 		offset += snprintf(buf+offset,0x1000-offset,
 											 "%d month%s",months,months > 1 ? "s" : "");
 		started = TRUE;
 	}
 	if(spot >= 86400) {
 		int days = (int)(spot / 86400);
-		spot = spot - days;
+		spot = spot - days * 86400;
 		if(started == FALSE)
 			buf[offset++] = ' ';
 		started = TRUE;
@@ -70,7 +73,7 @@ static void update_readable_frequency(void) {
 	}
 	if(spot >= 3600) {
 		int hours = (int)(spot / 3600);
-		spot = spot - hours;
+		spot = spot - hours * 3600;
 		if(started == FALSE)
 			buf[offset++] = ' ';
 		started = TRUE;
@@ -79,7 +82,7 @@ static void update_readable_frequency(void) {
 	}
 	if(spot >= 60) {
 		int minutes = (int)(spot / 60);
-		spot = spot - minutes;
+		spot = spot - minutes * 60;
 		if(started == FALSE)
 			buf[offset++] = ' ';
 		started = TRUE;
@@ -145,6 +148,19 @@ prepare_adjust_frequency (GtkRange     *range,
 		g_timeout_add(100,adjust_frequency,NULL);
 }
 
+static gboolean update_text_freq(void* udata) {
+	update_readable_frequency();
+	stuff.typing = 0;
+	return G_SOURCE_REMOVE;
+}
+
+static void on_text_freq(GtkEditable* thing, gpointer udata) {
+	if(stuff.typing) {
+		g_source_remove(stuff.typing);
+	}
+	stuff.typing = gtk_timeout_add(500,update_text_freq,NULL);
+}
+
 void new_habit_init(void) {
 	calc_constants();
 	GtkBuilder* b = gtk_builder_new_from_string(new_habit_glade,
@@ -162,6 +178,7 @@ void new_habit_init(void) {
 									 G_CALLBACK(do_create), NULL);
 	g_signal_connect(stuff.freqadj, "change-value",
 									 G_CALLBACK(prepare_adjust_frequency), NULL);
+	g_signal_connect(stuff.frequency, "changed", on_text_freq,NULL;)
 	g_signal_connect(stuff.top, "delete-event",G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 }
 
