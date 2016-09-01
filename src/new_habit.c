@@ -21,23 +21,24 @@ struct Stuff {
 
 double a,b;
 gdouble starting_point;
-void new_habit_init(void) {
+static void calc_constants(void) {
 /*
-	y = exp(a*x) + b;
-	bottom = exp(a*0) + b;
+	y = c^(a*x) + b;
+	bottom = c^(a*0) + b;
 	b = bottom - 1;
-	y = exp(a*x) + bottom - 1;
-	top = exp(a*1.0) + bottom - 1;
-	exp(a*1.0) = top - bottom + 1;
-	a * 1.0 = log(top - bottom + 1);
-	a = log(top - bottom + 1);
+	y = c^(a*x) + bottom - 1;
+	top = c^(a*1.0) + bottom - 1;
+	c^(a*1.0) = top - bottom + 1;
+	a * 1.0 = log_c(top - bottom + 1);
+	a = log(top - bottom + 1) / log_c;
 
 	reversed:
 	x = log(y-b) / a
 */
 	const int bottom = 300;
 	const int top = 86400 * 30;
-	a = log(top - bottom + 1);
+	const gdouble c = 1.5; // > 1
+	a = log(top - bottom + 1) / log(c);
 	b = bottom - 1;
 	starting_point = log(86400-b)/a;
 }
@@ -84,15 +85,16 @@ static void update_readable_frequency(void) {
 		offset += snprintf(buf+offset,0x1000-offset,"%d second%s",
 											 seconds,seconds > 1 ? "s" : "");
 	}
+	buf[offset] = '\0';
 
-	gtk_entry_set_text(GTK_ENTRY(stuff.readable_frequency),buf);
+	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),buf);
 }
 
 static gboolean adjust_frequency(void* udata) {
 	stuff.updating_importance = 0;
 	gdouble spot = stretch_along(gtk_adjustment_get_value(stuff.freqadjderp));
 	static char micros[0x1000];
-	ssize_t amt = snprintf(micros,0x1000,"%ld\n",(long)spot);
+	ssize_t amt = snprintf(micros,0x1000,"%ld",(long)spot);
 	gtk_entry_set_text(GTK_ENTRY(stuff.frequency), micros);
 	update_readable_frequency();
 	return G_SOURCE_REMOVE;
@@ -133,7 +135,8 @@ prepare_adjust_frequency (GtkRange     *range,
 		g_timeout_add(100,adjust_frequency,NULL);
 }
 
-void setup_new(void) {
+void new_habit_init(void) {
+	calc_constants();
 	GtkBuilder* b = gtk_builder_new_from_string(new_habit_glade,
 																							new_habit_glade_length);
 

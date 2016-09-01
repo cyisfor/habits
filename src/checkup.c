@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	gtk_init(&argc,&argv);
 	db_init();
+	new_habit_init();
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
