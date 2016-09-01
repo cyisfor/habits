@@ -1,8 +1,0 @@
-{
-	"name": "habits",
-	"description": "A minimal D application.",
-	"copyright": "Copyright © 2016, user",
-	"authors": ["user"],
-	"dependencies": {
-	}
-}
