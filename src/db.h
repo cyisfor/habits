@@ -20,3 +20,5 @@ void db_done(void);
 
 void db_init(void);
 
+bool db_create_habit(const char* desc, ssize_t desclen,
+										 double importance, sqlite3_int64 frequency);

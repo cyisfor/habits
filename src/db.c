@@ -31,7 +31,7 @@ static void check(int res) {
 	abort();
 }
 
-void db_create_habit(const char* desc, ssize_t desclen,
+bool db_create_habit(const char* desc, ssize_t desclen,
 										 double importance, sqlite3_int64 frequency) {
 	check(sqlite3_bind_text(create_find_stmt, 1, desc, desclen, NULL));
 	int res = sqlite3_step(create_find_stmt);
@@ -43,7 +43,7 @@ void db_create_habit(const char* desc, ssize_t desclen,
 		res = sqlite3_step(create_update_stmt);
 		check(sqlite3_reset(create_update_stmt));
 		check(res);
-		return;
+		return false;
 	}
 	check(res);
 	check(sqlite3_bind_double(create_insert_stmt, 1, importance));
@@ -52,6 +52,7 @@ void db_create_habit(const char* desc, ssize_t desclen,
 	res = sqlite3_step(create_insert_stmt);
 	check(sqlite3_reset(create_insert_stmt));
 	check(res);
+	return true;
 }	
 
 void db_set_enabled(long ident, bool enabled) {

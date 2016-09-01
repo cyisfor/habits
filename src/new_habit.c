@@ -95,10 +95,27 @@ static void adjust_frequency(void* udata) {
 static gboolean do_create(GtkButton* btn, void* udata) {
 	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(stuff.frequency),10,&err);
+	assert(err == NULL || *err == '\0');
 	if(frequency == 0) frequency = 600;
-	double importance = strtod(gtk_adjustment_get_value(stuff.importance));
-	const char* desc = gtk_entry_get_text(stuff.description);
-	db_create_habit(desc,importance,frequency);
+	double importance = strtod(gtk_adjustment_get_value(stuff.importance),
+														 &err);
+	assert(err == NULL || *err == '\0');
+	bool created =
+		db_create_habit(gtk_entry_get_text(stuff.description),
+									gtk_entry_get_text_length(stuff.description),
+									importance,frequency);
+
+	GtkWidget* dialog = gtk_message_dialog_new
+		(NULL,
+		 0,
+		 GTK_MESSAGE_INFO,
+		 GTK_BUTTONS_OK,
+		 "Habit was %s: %s!",
+		 created ?
+		 "created" : "updated",
+		 gtk_entry_get_text(stuff.description));
+	gtk_widget_show_all(dialog);
+	gtk_widget_hide(stuff.top);
 }
 
 static gboolean
