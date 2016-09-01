@@ -22,7 +22,7 @@ enum Column {
 };
 
 static void color_for(GdkRGBA* dest, double ratio) {
-	int r,g,b;
+	double r,g,b;
 	b = 0;
 	if(ratio >= 1) {
 		g = 0;
@@ -181,6 +181,7 @@ int main(int argc, char *argv[])
 
 	void on_didit() {
 		gtk_tree_selection_selected_foreach(selection, complete_row, NULL);
+		gtk_tree_selection_unselect_all(selection);
 		update_intervals(NULL);
 	}
 
@@ -221,14 +222,12 @@ int main(int argc, char *argv[])
 		poker = 0;
 
 	void start() {
-		printf("start %d %d\n",updater,poker);
 		if(updater==0)
 			updater = g_timeout_add_seconds(1, update_intervals, NULL);
 		if(poker==0)
 			poker = g_timeout_add_seconds(600, poke_me, NULL);
 	}
 	void stop() {
-		printf("stop %d %d\n",updater,poker);
 		if(updater) g_source_remove(updater);
 		if(poker) g_source_remove(poker);
 		updater = 0;
