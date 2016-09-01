@@ -13,7 +13,7 @@ struct db_habit {
 
 void db_set_enabled(long ident, bool enabled);
 
-bool db_next_pending(struct db_habit* self);
+bool db_next(struct db_habit* self);
 
 void db_perform(sqlite_int64 ident);
 
@@ -23,3 +23,5 @@ void db_init(void);
 
 bool db_create_habit(const char* desc, ssize_t desclen,
 										 double importance, sqlite3_int64 frequency);
+void db_search(const char* query, ssize_t querylen);
+void db_stop_searching(void);

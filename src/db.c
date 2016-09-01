@@ -97,7 +97,7 @@ void db_stop_searching(void) {
 	sqlite3_reset(next_searching_stmt);
 }
 
-void db_search(const char* query) {
+void db_search(const char* query, ssize_t querylen) {
 	sqlite3_reset(next_searching_stmt);
 	CHECK(sqlite3_bind_text(next_searching_stmt, 1, query, querylen, NULL));
 	searching = true;
@@ -106,7 +106,7 @@ void db_search(const char* query) {
 
 bool db_next(struct db_habit* self) {
 	sqlite3_stmt* stmt;
-	if(searching) stmt = next_search_stmt;
+	if(searching) stmt = next_searching_stmt;
 	else stmt = next_pending_stmt;
 	
 	int res = sqlite3_step(stmt);

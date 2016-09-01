@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 		struct db_habit habit;
 		GdkRGBA thingy;
 		bool odd = false;
-		while(db_next_pending(&habit)) {
+		while(db_next(&habit)) {
 			const char* elapsed = "never";
 			if(habit.has_performed) {
 				elapsed = readable_interval(habit.elapsed / 1000, true);
@@ -274,13 +274,14 @@ int main(int argc, char *argv[])
 	
 	gboolean search_for_stuff(void* udata) {
 		searcher = 0;
-		db_searching(gtk_entry_get_value(GTK_ENTRY(search)));
+		db_search(gtk_entry_get_text(GTK_ENTRY(search)),
+							gtk_entry_get_text_length(GTK_ENTRY(search)));
 		return G_SOURCE_CONTINUE;
 	}
 	
 	void search_later() {
 		if(searcher != 0) g_source_remove(searcher);
-		searcher = gtk_timeout_add(100,search_for_stuff,NULL);
+		searcher = g_timeout_add(100,search_for_stuff,NULL);
 	}
 	
 	void switch_to_search() {
@@ -296,7 +297,7 @@ int main(int argc, char *argv[])
 		gtk_widget_show_all(mainbox);
 		db_stop_searching();
 	}
-	
+	switch_to_main();
 	g_signal_connect(search_start,"clicked",switch_to_search,NULL);
 	
 	gtk_main();
