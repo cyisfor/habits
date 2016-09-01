@@ -34,3 +34,7 @@ build $pack/make_specialescapes: program $pack/make_specialescapes.c
 build checkup: program obj/checkup.o obj/db.o obj/new_habit.o obj/readable_interval.o
 
 default checkup
+
+
+build apply_template: program obj/apply_template.o
+build obj/apply_template.o: object src/apply_template.c
