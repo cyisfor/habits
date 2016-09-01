@@ -10,9 +10,13 @@
 #include <stdlib.h> // NULL
 #include <time.h> // clock_*
 
+sqlite3_stmt *begin = NULL,
+	*commit = NULL;
+
 sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
-	*perform_stmt = NULL;
+	*perform_stmt = NULL,
+	*history_stmt = NULL;
 
 sqlite3_stmt *create_find_stmt = NULL,
 	*create_update_stmt = NULL,
@@ -86,20 +90,33 @@ bool db_next_pending(struct db_habit* self) {
 }
 
 void db_perform(sqlite_int64 ident) {
+	sqlite3_step(begin);
+	sqlite3_reset(begin);
+	sqlite3_int64 now = clock_now();
 	sqlite3_bind_int64(perform_stmt,1,ident);
-	sqlite3_bind_int64(perform_stmt,2,clock_now());
+	sqlite3_bind_int64(perform_stmt,2,now);
 	int res = sqlite3_step(perform_stmt);
 	sqlite3_reset(perform_stmt);
 	check(res);
+	sqlite3_bind_int64(history_stmt,1,ident);
+	sqlite3_bind_int64(history_stmt,2,now);
+	res = sqlite3_step(history_stmt);
+	sqlite3_reset(history_stmt);
+	check(res);
+	sqlite3_step(commit);
+	sqlite3_reset(commit);
 }
 
 void db_done(void) {
 	sqlite3_finalize(set_enabled_stmt);
 	sqlite3_finalize(next_pending_stmt);
 	sqlite3_finalize(perform_stmt);
+	sqlite3_finalize(history_stmt);
 	sqlite3_finalize(create_find_stmt);
 	sqlite3_finalize(create_update_stmt);
 	sqlite3_finalize(create_insert_stmt);
+	sqlite3_finalize(begin);
+	sqlite3_finalize(commit);
 	check(sqlite3_close(db));
 }
 
@@ -130,5 +147,9 @@ void db_init(void) {
 	PREPARE(create_find_stmt,"SELECT id FROM habits WHERE description = ?");
 	PREPARE(create_update_stmt,"UPDATE habits SET importance = ?, frequency = ? WHERE id = ?");
 	PREPARE(create_insert_stmt,"INSERT INTO habits (importance,frequency,description) VALUES (?,?,?)");
-	
+	PREPARE(begin,"BEGIN");
+	PREPARE(commit,"COMMIT");
+	// derp
+	assert(true==db_create_habit(LITLEN("Replace Toothbrush"),
+										 1.0, 7776000));
 }
