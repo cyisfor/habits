@@ -1,5 +1,5 @@
 #include "db.h"
-#include "checkup_glade.h"
+#include "checkup.glade.h"
 #include "litlen.h"
 
 #include <glib.h>
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	GET(didit);
 	GETFULL(GtkCellRendererToggle,GTK_CELL_RENDERER_TOGGLE,disabled);
 	GET(update);
-	GET(view);
+	GET(view);	
 
 	gtk_window_stick(GTK_WINDOW(top));
 	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
@@ -229,6 +229,10 @@ int main(int argc, char *argv[])
 	gtk_style_context_add_provider(gtk_widget_get_style_context(top),
 																 GTK_STYLE_PROVIDER(css),
 																 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	gtk_widget_show_all(top);
+
+	setup_new();
+	
 	gtk_main();
 	db_done();
 	return 0;

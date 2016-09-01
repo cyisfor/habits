@@ -10,14 +10,14 @@ rule object
 rule resource
   command = name=$name /home/code/data_to_header_string/pack $in >$out
 
-build obj/checkup.o: object src/checkup.c gen/checkup_glade.h
-build obj/db.o: object src/db.c gen/base.sql.h gen/pending.sql.h
+build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
+build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h
 build gen/base.sql.h: resource sql/base.sql
-	name = base_sql
+  name = base_sql
 build gen/pending.sql.h: resource sql/pending.sql
-	name = pending_sql
-build gen/checkup_glade.h: resource checkup.glade.xml
-	name = checkup_glade
+  name = pending_sql
+build gen/checkup.glade.h: resource checkup.glade.xml
+  name = checkup_glade
 
 build checkup: program obj/checkup.o obj/db.o
 
