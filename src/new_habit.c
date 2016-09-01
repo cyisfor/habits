@@ -56,7 +56,7 @@ static void update_readable_frequency(void) {
 	assert(err == NULL || *err == '\0');
 
 	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),
-										 readable_interval(frequency));
+										 readable_interval(frequency, true));
 }
 
 static gboolean adjust_frequency(void* udata) {

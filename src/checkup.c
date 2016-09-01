@@ -111,7 +111,6 @@ int main(int argc, char *argv[])
 
 
 	int update_intervals(void* udata) {
-		puts("update_intervals");
 		GtkTreeIter row;
 		bool has_row = gtk_tree_model_get_iter_first(items, &row);
 		struct db_habit habit;
@@ -120,12 +119,12 @@ int main(int argc, char *argv[])
 		while(db_next_pending(&habit)) {
 			const char* elapsed = "never";
 			if(habit.has_performed) {
-				elapsed = readable_interval(habit.elapsed / 1000);
+				elapsed = readable_interval(habit.elapsed / 1000, false);
 				color_for(&thingy, (habit.elapsed - habit.frequency) /
 									habit.frequency);
 			}
 
-			if(has_row) {
+			if(has_row == TRUE) {
 				gtk_list_store_set(GTK_LIST_STORE(items),
 													 &row,
 													 IDENT, habit.ident,
@@ -133,7 +132,6 @@ int main(int argc, char *argv[])
 													 DISABLED, FALSE,
 													 NAME, habit.description,
 													 -1);
-				has_row = gtk_tree_model_iter_next(items,&row);
 			} else {
 				GdkRGBA* background;
 				if(odd) {
@@ -159,6 +157,7 @@ int main(int argc, char *argv[])
 													 DANGER, &thingy,
 													 -1);
 			}
+			has_row = gtk_tree_model_iter_next(items,&row);
 		}
 		// take off expired items at the end
 		if(has_row) {
@@ -170,21 +169,22 @@ int main(int argc, char *argv[])
 		return G_SOURCE_CONTINUE;
 	}
 
-	int complete_row(GtkTreeModel *model,
-										GtkTreePath *path,
-										GtkTreeIter *iter,
-										gpointer data) {
+	void complete_row(GtkTreeSelection *selection,
+                                     GtkTreeSelectionForeachFunc func,
+                                     gpointer data) {
 		GValue ident = {};
 		gtk_tree_model_get_value(model, iter, IDENT, &ident);
 		assert(G_VALUE_HOLDS_INT64(&ident));
 		db_perform(g_value_get_int64(&ident));
-		return TRUE;
 	}
 
 	void on_didit() {
-		gtk_tree_model_foreach(items, complete_row, NULL);
+		gtk_tree_selection_selected_foreach(items, complete_row, NULL);
 		update_intervals(NULL);
 	}
+
+	g_signal_connect(didit, "clicked",G_CALLBACK(on_didit), NULL);
+	
 	void
 		disabled_toggled (GtkCellRendererToggle *cell_renderer,
 											gchar                 *spath,

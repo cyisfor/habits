@@ -1,7 +1,9 @@
 #include "readable_interval.h"
+#include "litlen.h"
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 const char* readable_interval(long seconds, bool shorten) {
 	static char buf[0x1000];
@@ -21,9 +23,9 @@ const char* readable_interval(long seconds, bool shorten) {
 			} else {																													\
 				started = true;																									\
 			}																																	\
-			if(months == 1) {																									\
+			if(name ## _s == 1) {																									\
 				memcpy(buf+offset,LITLEN("1 " #name));													\
-				buf += sizeof("1 " #name)-1;																		\
+				offset += sizeof("1 " #name)-1;																		\
 			} else {																													\
 				offset += snprintf(buf+offset,0x1000-offset,										\
 													 "%d " #name "s", name ## _s);								\
