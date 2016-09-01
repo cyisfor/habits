@@ -18,7 +18,7 @@ build obj/new_habit.o: object src/new_habit.c | gen/new_habit.glade.h
 build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
 build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h
 build obj/readable_interval.o: object src/readable_interval.c
-build gen/base.sql.h: resource sql/base.sql
+build gen/base.sql.h: resource sql/base.sql | $pack/pack
   name = base_sql
 build gen/pending.sql.h: resource sql/pending.sql | $pack/pack
   name = pending_sql
