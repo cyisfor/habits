@@ -1,6 +1,6 @@
 create table if not exists habits (
     id INTEGER primary key,
-    importance REAL NOT NULL,
+    importance REAL NOT NULL, -- 0 to 1
     description text NOT NULL,
     enabled boolean NOT NULL DEFAULT 1,
     frequency INTEGER NOT NULL, -- in milliseconds

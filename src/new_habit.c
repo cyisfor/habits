@@ -97,7 +97,8 @@ static gboolean do_create(GtkButton* btn, void* udata) {
 	long frequency = strtol(gtk_entry_get_text(stuff.frequency),10,&err);
 	if(frequency == 0) frequency = 600;
 	double importance = strtod(gtk_adjustment_get_value(stuff.importance));
-	
+	const char* desc = gtk_entry_get_text(stuff.description);
+	db_create_habit(desc,importance,frequency);
 }
 
 static gboolean

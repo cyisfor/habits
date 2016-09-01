@@ -31,6 +31,29 @@ static void check(int res) {
 	abort();
 }
 
+void db_create_habit(const char* desc, ssize_t desclen,
+										 double importance, sqlite3_int64 frequency) {
+	check(sqlite3_bind_text(create_find_stmt, 1, desc, desclen, NULL));
+	int res = sqlite3_step(create_find_stmt);
+	if(res == SQLITE_ROW) {
+		sqlite3_int64 ident = sqlite3_column_int64(create_find_stmt, 0);
+		check(sqlite3_bind_double(create_update_stmt, 1, importance));
+		check(sqlite3_bind_int64(create_update_stmt, 2, frequency));
+		check(sqlite3_bind_int64(create_update_stmt, 3, ident));
+		res = sqlite3_step(create_update_stmt);
+		check(sqlite3_reset(create_update_stmt));
+		check(res);
+		return;
+	}
+	check(res);
+	check(sqlite3_bind_double(create_insert_stmt, 1, importance));
+	check(sqlite3_bind_int64(create_insert_stmt, 2, frequency));
+	check(sqlite3_bind_text(create_insert_stmt, 3, desc, desclen, NULL));
+	res = sqlite3_step(create_insert_stmt);
+	check(sqlite3_reset(create_insert_stmt));
+	check(res);
+}	
+
 void db_set_enabled(long ident, bool enabled) {
 	check(sqlite3_bind_int(set_enabled_stmt, 1, ident));
 	check(sqlite3_bind_int(set_enabled_stmt, 2, enabled ? 1 : 0));
