@@ -66,6 +66,11 @@ int main(int argc, char *argv[])
 	GET(update);
 	GET(view);
 	GET(open_new);
+	GET(search_start);
+	GET(search);
+	GET(search_done);
+	GET(mainbox);
+	GET(searchbox);
 
 	gtk_window_stick(GTK_WINDOW(top));
 	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
@@ -264,6 +269,36 @@ int main(int argc, char *argv[])
 	new_habit_init();
 	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),NULL);
 
+
+	guint searcher = 0;
+	
+	gboolean search_for_stuff(void* udata) {
+		searcher = 0;
+		db_searching(gtk_entry_get_value(GTK_ENTRY(search)));
+		return G_SOURCE_CONTINUE;
+	}
+	
+	void search_later() {
+		if(searcher != 0) g_source_remove(searcher);
+		searcher = gtk_timeout_add(100,search_for_stuff,NULL);
+	}
+	
+	void switch_to_search() {
+		gtk_widget_hide(mainbox);
+		gtk_widget_show_all(searchbox);
+		g_signal_connect(search,"changed",search_later,NULL);
+		search_for_stuff(NULL);
+	}
+
+	void switch_to_main() {
+		if(searcher) g_source_remove(searcher);
+		gtk_widget_hide(searchbox);
+		gtk_widget_show_all(mainbox);
+		db_stop_searching();
+	}
+	
+	g_signal_connect(search_start,"clicked",switch_to_search,NULL);
+	
 	gtk_main();
 	db_done();
 	return 0;

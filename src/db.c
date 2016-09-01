@@ -15,6 +15,7 @@ sqlite3_stmt *begin_stmt = NULL,
 
 sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
+	*next_searching_stmt = NULL,
 	*perform_stmt = NULL,
 	*history_stmt = NULL;
 
@@ -88,20 +89,39 @@ void db_set_enabled(long ident, bool enabled) {
 	CHECK(res);
 }
 
-bool db_next_pending(struct db_habit* self) {
-	int res = sqlite3_step(next_pending_stmt);
+bool searching = false;
+const char* search = NULL;
+
+void db_stop_searching(void) {
+	searching = false;
+	sqlite3_reset(next_searching_stmt);
+}
+
+void db_search(const char* query) {
+	sqlite3_reset(next_searching_stmt);
+	CHECK(sqlite3_bind_text(next_searching_stmt, 1, query, querylen, NULL));
+	searching = true;
+	sqlite3_reset(next_pending_stmt);
+}
+
+bool db_next(struct db_habit* self) {
+	sqlite3_stmt* stmt;
+	if(searching) stmt = next_search_stmt;
+	else stmt = next_pending_stmt;
+	
+	int res = sqlite3_step(stmt);
 	if(res == SQLITE_DONE) {
-		sqlite3_reset(next_pending_stmt);
+		sqlite3_reset(stmt);
 		return false;
 	}
 	CHECK(res);
 	assert(res == SQLITE_ROW);
-	self->ident = sqlite3_column_int64(next_pending_stmt, 0);
-	self->description = sqlite3_column_text(next_pending_stmt, 1);
-	self->frequency = sqlite3_column_double(next_pending_stmt, 2);
-	self->has_performed = sqlite3_column_int(next_pending_stmt, 3) != 0;
+	self->ident = sqlite3_column_int64(stmt, 0);
+	self->description = sqlite3_column_text(stmt, 1);
+	self->frequency = sqlite3_column_double(stmt, 2);
+	self->has_performed = sqlite3_column_int(stmt, 3) != 0;
 	if(self->has_performed) {
-		self->elapsed = sqlite3_column_int64(next_pending_stmt, 4);
+		self->elapsed = sqlite3_column_int64(stmt, 4);
 	}
 	return true;
 }
@@ -124,6 +144,7 @@ void db_perform(sqlite_int64 ident) {
 
 void db_done(void) {
 	sqlite3_finalize(set_enabled_stmt);
+	sqlite3_finalize(next_searching_stmt);
 	sqlite3_finalize(next_pending_stmt);
 	sqlite3_finalize(perform_stmt);
 	sqlite3_finalize(history_stmt);
@@ -156,6 +177,7 @@ void db_init(void) {
 		CHECK(sqlite3_prepare_v2(db, LITLEN(sql), &what, NULL));
 	PREPARE(set_enabled_stmt, "UPDATE habits SET enabled = ?2 WHERE id = ?1");
 	PREPARE(next_pending_stmt,pending_sql);
+	PREPARE(next_searching_stmt,searching_sql);
 	// XXX: must set elapsed to custom `now` - last_performed for query ordering
 	PREPARE(perform_stmt, "UPDATE habits SET last_performed = ?2 WHERE id = ?1");
 	PREPARE(history_stmt, "INSERT INTO HISTORY (habit,performed) VALUES (?,?)");
