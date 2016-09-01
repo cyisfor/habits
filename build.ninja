@@ -1,5 +1,5 @@
 ldflags = `pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -lm -g
-cflags = `pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -O2 -Igen/ -fdiagnostics-color=always
+cflags = `pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -Igen/ -fdiagnostics-color=always
 pack = ./data_to_header_string
 
 rule run
@@ -22,6 +22,8 @@ build gen/base.sql.h: resource sql/base.sql | $pack/pack
   name = base_sql
 build gen/pending.sql.h: resource sql/pending.sql | $pack/pack
   name = pending_sql
+build gen/searching.sql.h: resource sql/searching.sql | $pack/pack
+  name = searching_sql
 build gen/checkup.glade.h: resource checkup.glade.xml | $pack/pack
   name = checkup_glade
 build gen/new_habit.glade.h: resource new_habit.glade.xml | $pack/pack
@@ -38,3 +40,12 @@ default checkup
 
 build apply_template: program obj/apply_template.o
 build obj/apply_template.o: object src/apply_template.c
+
+rule template
+  command = $env ./apply_template <$in >$out
+
+build sql/pending.sql: template sql/querying.template.sql | apply_template
+  env = env CRITERIA="enabled AND ( ( NOT has_performed ) OR  (frequency / 1.5 < elapsed) )"
+
+build sql/searching.sql: template sql/querying.template.sql | apply_template
+  env = env CRITERIA="description LIKE ?1"
