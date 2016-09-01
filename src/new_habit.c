@@ -20,6 +20,7 @@ struct Stuff {
 } stuff = {}; 
 
 double a,b;
+const gdouble c = 1.2; // > 1
 gdouble starting_point;
 static void calc_constants(void) {
 /*
@@ -36,56 +37,65 @@ static void calc_constants(void) {
 	x = log(y-b) / a
 */
 	const int bottom = 300;
-	const int top = 86400 * 30;
-	const gdouble c = 1.5; // > 1
+	const int top = 86400 * 30 + 30;
 	a = log(top - bottom + 1) / log(c);
 	b = bottom - 1;
 	starting_point = log(86400-b)/a;
 }
 
 static gdouble stretch_along(gdouble spot) {
-	return (exp(a * spot) + b);
+	return (pow(c, a * spot) + b);
 }
 
 static void update_readable_frequency(void) {
 	char buf[0x1000];
 	ssize_t offset = 0;
 	gdouble spot = stretch_along(gtk_adjustment_get_value(stuff.freqadjderp));
+	gboolean started = FALSE;
 	if(spot >= 86400 * 30) {
 		int months = (int)(spot / (86400 * 30));
 		spot = spot - months;
 		offset += snprintf(buf+offset,0x1000-offset,
 											 "%d month%s",months,months > 1 ? "s" : "");
+		started = TRUE;
 	}
 	if(spot >= 86400) {
 		int days = (int)(spot / 86400);
 		spot = spot - days;
-
+		if(started == FALSE)
+			buf[offset++] = ' ';
+		started = TRUE;
 		offset += snprintf(buf+offset,0x1000-offset,
 											 "%d day%s",days,days > 1 ? "s" : "");
 	}
 	if(spot >= 3600) {
 		int hours = (int)(spot / 3600);
 		spot = spot - hours;
-
+		if(started == FALSE)
+			buf[offset++] = ' ';
+		started = TRUE;
 		offset += snprintf(buf+offset,0x1000-offset,
 											 "%d hour%s",hours,hours > 1 ? "s" : "");
 	}
 	if(spot >= 60) {
 		int minutes = (int)(spot / 60);
 		spot = spot - minutes;
-
+		if(started == FALSE)
+			buf[offset++] = ' ';
+		started = TRUE;
 		offset += snprintf(buf+offset,0x1000-offset,"%d minute%s",
 											 minutes,minutes > 1 ? "s" : "");
 	}
 	if(spot >= 1) {
-			int seconds = (int)(spot / (86400 * 30));
-		spot = spot - seconds;
-
+		int seconds = (int)spot;
+		// spot = spot - seconds;
+		if(started == FALSE)
+			buf[offset++] = ' ';
+		//started = TRUE;
 		offset += snprintf(buf+offset,0x1000-offset,"%d second%s",
 											 seconds,seconds > 1 ? "s" : "");
 	}
-	buf[offset] = '\0';
+	buf[offset+1] = '\0';
 
 	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),buf);
 }
@@ -152,6 +162,7 @@ void new_habit_init(void) {
 									 G_CALLBACK(do_create), NULL);
 	g_signal_connect(stuff.freqadj, "change-value",
 									 G_CALLBACK(prepare_adjust_frequency), NULL);
+	g_signal_connect(stuff.top, "delete-event",G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 }
 
 
