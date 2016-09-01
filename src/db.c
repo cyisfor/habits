@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stdlib.h> // NULL
 #include <time.h> // clock_*
+#include <unistd.h> // chdir
 
 sqlite3_stmt *begin_stmt = NULL,
 	*commit_stmt = NULL;
@@ -166,7 +167,10 @@ void sqlite_millinow(sqlite3_context* ctx, int narg, sqlite3_value** args) {
 }
 
 void db_init(void) {
+	chdir(getenv("HOME"));
+	chdir(".local"); // don't bother check if success, just put it in home
 	assert(0==sqlite3_open("habits.sqlite",&db));
+	chdir("/");
 	assert(db!= NULL);
 	sqlite3_busy_timeout(db, 10000);
 	char* errmsg = NULL;

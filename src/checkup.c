@@ -52,7 +52,8 @@ int main(int argc, char *argv[])
 	gtk_init(&argc,&argv);
 	db_init();
 	new_habit_init();
-
+	notify_init("checkup");
+	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
 	#define GETFULL(type,conv,name) \
@@ -91,6 +92,17 @@ int main(int argc, char *argv[])
 		GtkTreeIter iter;
 		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
 			return G_SOURCE_CONTINUE;
+		double cutoff = 0.5;
+		for(;;) {
+			if(cutoff < (random() / (double)RAND_MAX)) {
+				break;
+			}
+			if(FALSE==gtk_tree_model_iter_next(items, &iter)) {
+				gtk_tree_model_get_iter_first(items,&iter);
+				break;
+			}
+			cutoff /= 2;
+		}
 		GValue label = {},
 			ident = {};
 		gtk_tree_model_get_value(items,
@@ -106,7 +118,10 @@ int main(int argc, char *argv[])
 			 g_value_get_string(&label),
 			 "task-due");
 		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
-		gtk_widget_show_all(GTK_WIDGET(n));
+		GError* err = NULL;
+		if(FALSE==notify_notification_show(n, &err)) {
+			error(0,0,err->message);
+		}
 		return G_SOURCE_CONTINUE;
 	}
 
@@ -230,7 +245,7 @@ int main(int argc, char *argv[])
 		if(updater==0)
 			updater = g_timeout_add_seconds(1, update_intervals, NULL);
 		if(poker==0)
-			poker = g_timeout_add_seconds(600, poke_me, NULL);
+			poker = g_timeout_add_seconds(10, poke_me, NULL);
 	}
 	void stop() {
 		if(updater) g_source_remove(updater);
