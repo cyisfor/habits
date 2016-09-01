@@ -10,8 +10,8 @@
 #include <stdlib.h> // NULL
 #include <time.h> // clock_*
 
-sqlite3_stmt *begin = NULL,
-	*commit = NULL;
+sqlite3_stmt *begin_stmt = NULL,
+	*commit_stmt = NULL;
 
 sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
@@ -38,23 +38,37 @@ static void check(const char* file, int line, int res) {
 				sqlite3_errstr(res));
 	abort();
 }
-
 #define CHECK(a) check(__FILE__, __LINE__, (a))
+
+
+void begin() {
+	CHECK(sqlite3_step(begin_stmt));
+	sqlite3_reset(begin_stmt);
+}
+
+void commit() {
+	CHECK(sqlite3_step(commit_stmt));
+	sqlite3_reset(commit_stmt);
+}
 
 bool db_create_habit(const char* desc, ssize_t desclen,
 										 double importance, sqlite3_int64 frequency) {
+	begin();
 	CHECK(sqlite3_bind_text(create_find_stmt, 1, desc, desclen, NULL));
 	int res = sqlite3_step(create_find_stmt);
 	if(res == SQLITE_ROW) {
 		sqlite3_int64 ident = sqlite3_column_int64(create_find_stmt, 0);
+		sqlite3_reset(create_find_stmt);
 		CHECK(sqlite3_bind_double(create_update_stmt, 1, importance));
 		CHECK(sqlite3_bind_int64(create_update_stmt, 2, frequency));
 		CHECK(sqlite3_bind_int64(create_update_stmt, 3, ident));
 		res = sqlite3_step(create_update_stmt);
 		CHECK(sqlite3_reset(create_update_stmt));
 		CHECK(res);
+		commit();
 		return false;
 	}
+	sqlite3_reset(create_find_stmt);
 	CHECK(res);
 	CHECK(sqlite3_bind_double(create_insert_stmt, 1, importance));
 	CHECK(sqlite3_bind_int64(create_insert_stmt, 2, frequency));
@@ -62,6 +76,7 @@ bool db_create_habit(const char* desc, ssize_t desclen,
 	res = sqlite3_step(create_insert_stmt);
 	CHECK(sqlite3_reset(create_insert_stmt));
 	CHECK(res);
+	commit();
 	return true;
 }	
 
@@ -92,8 +107,7 @@ bool db_next_pending(struct db_habit* self) {
 }
 
 void db_perform(sqlite_int64 ident) {
-	sqlite3_step(begin);
-	sqlite3_reset(begin);
+	begin();
 	sqlite3_int64 now = clock_now();
 	sqlite3_bind_int64(perform_stmt,1,ident);
 	sqlite3_bind_int64(perform_stmt,2,now);
@@ -105,8 +119,7 @@ void db_perform(sqlite_int64 ident) {
 	res = sqlite3_step(history_stmt);
 	sqlite3_reset(history_stmt);
 	CHECK(res);
-	sqlite3_step(commit);
-	sqlite3_reset(commit);
+	commit();
 }
 
 void db_done(void) {
@@ -117,8 +130,8 @@ void db_done(void) {
 	sqlite3_finalize(create_find_stmt);
 	sqlite3_finalize(create_update_stmt);
 	sqlite3_finalize(create_insert_stmt);
-	sqlite3_finalize(begin);
-	sqlite3_finalize(commit);
+	sqlite3_finalize(begin_stmt);
+	sqlite3_finalize(commit_stmt);
 	CHECK(sqlite3_close(db));
 }
 
@@ -150,6 +163,6 @@ void db_init(void) {
 	PREPARE(create_find_stmt,"SELECT id FROM habits WHERE description = ?");
 	PREPARE(create_update_stmt,"UPDATE habits SET importance = ?, frequency = ? WHERE id = ?");
 	PREPARE(create_insert_stmt,"INSERT INTO habits (importance,frequency,description) VALUES (?,?,?)");
-	PREPARE(begin,"BEGIN");
-	PREPARE(commit,"COMMIT");
+	PREPARE(begin_stmt,"BEGIN");
+	PREPARE(commit_stmt,"COMMIT");
 }
