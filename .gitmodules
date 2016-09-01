@@ -1,4 +1,4 @@
 [submodule "data_to_header_string"]
 	path = data_to_header_string
-	url = ./data_to_header_string
+	url = https://github.com/cyisfor/data_to_header_string
 	ignore = untracked
