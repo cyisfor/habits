@@ -1,7 +1,10 @@
+#include "new_habit.h"
+
 #include "new_habit.glade.h"
 
 #include <gtk/gtk.h>
 #include <math.h>
+#include <stdlib.h> // strtol
 
 #define NAMES X(top) X(importance) X(description) X(frequency) X(freqadj) X(readable_frequency) X(create_habit)
 
@@ -69,18 +72,18 @@ static void update_readable_frequency(void) {
 		int minutes = (int)(spot / 60);
 		spot = spot - minutes;
 
-		offset += snprintf(buf+offset,"%d minute%s",0x1000-offset,
+		offset += snprintf(buf+offset,0x1000-offset,"%d minute%s",
 											 minutes,minutes > 1 ? "s" : "");
 	}
 	if(spot >= 1) {
 			int seconds = (int)(spot / (86400 * 30));
 		spot = spot - seconds;
 
-		offset += snprintf(buf+offset,"%d second%s",0x1000-offset,
+		offset += snprintf(buf+offset,0x1000-offset,"%d second%s",
 											 seconds,seconds > 1 ? "s" : "");
 	}
 
-	gtk_entry_set_text(stuff.readable_frequency,buf);
+	gtk_entry_set_text(GTK_ENTRY(stuff.readable_frequency),buf);
 }
 
 static void adjust_frequency(void* udata) {
@@ -88,7 +91,7 @@ static void adjust_frequency(void* udata) {
 	gdouble spot = stretch_along(gtk_adjustment_get_value(stuff.freqadjderp));
 	static char micros[0x1000];
 	ssize_t amt = snprintf(micros,0x1000,"%ld\n",(long)spot);
-	gtk_entry_set_text(stuff.frequency, micros, amt);
+	gtk_entry_set_text(GTK_ENTRY(stuff.frequency), micros);
 	update_readable_frequency();
 }
 
@@ -145,10 +148,10 @@ void setup_new(void) {
 }
 
 
-void show_new(void) {
-	gtk_entry_set_text(stuff.frequency,"86400");
+void new_habit_show(void) {
+	gtk_entry_set_text(GTK_TEXT(stuff.frequency),"86400");
 	update_readable_frequency();
-	gtk_entry_set_text(stuff.description,"");
+	gtk_entry_set_text(GTK_TEXT(stuff.description),"");
 	gtk_adjustment_set_value(stuff.importancederp, 0.5);
 	gtk_adjustment_set_value(stuff.freqadjderp, starting_point);
 	gtk_widget_show_all(stuff.top);

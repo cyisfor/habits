@@ -1,4 +1,6 @@
 #include "db.h"
+#include "new_habit.h"
+
 #include "checkup.glade.h"
 #include "litlen.h"
 
@@ -63,7 +65,8 @@ int main(int argc, char *argv[])
 	GETFULL(GtkCellRendererToggle,GTK_CELL_RENDERER_TOGGLE,disabled);
 	GET(update);
 	GET(view);	
-
+	GET(open_new);
+	
 	gtk_window_stick(GTK_WINDOW(top));
 	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
 
@@ -231,7 +234,8 @@ int main(int argc, char *argv[])
 																 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	gtk_widget_show_all(top);
 
-	setup_new();
+	new_habit_init();
+	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),NULL);
 	
 	gtk_main();
 	db_done();
