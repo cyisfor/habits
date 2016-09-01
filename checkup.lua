@@ -278,7 +278,7 @@ local function complete_row(items, path, iter)
    db.perform(habit)
 end
 
-function b.didit:on_clicked()1
+function b.didit:on_clicked()
    selection:selected_foreach(complete_row)
    update_intervals()
 end

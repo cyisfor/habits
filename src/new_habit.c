@@ -56,7 +56,7 @@ static void update_readable_frequency(void) {
 	assert(err == NULL || *err == '\0');
 
 	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),
-										 readable_interval(frequency, true));
+										 readable_interval(frequency, false));
 }
 
 static gboolean adjust_frequency(void* udata) {
@@ -72,9 +72,10 @@ static gboolean adjust_frequency(void* udata) {
 static gboolean do_create(GtkButton* btn, void* udata) {
 	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(stuff.frequency)),
-													&err, 10);
+													&err, 10)
+		* 1000; // milliseconds
 	assert(err == NULL || *err == '\0');
-	if(frequency == 0) frequency = 600;
+	if(frequency == 0) frequency = 600000;
 	double importance = gtk_adjustment_get_value(stuff.importancederp);
 	gboolean created =
 		db_create_habit(gtk_entry_get_text(GTK_ENTRY(stuff.description)),

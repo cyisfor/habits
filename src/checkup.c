@@ -21,7 +21,7 @@ enum Column {
 	BACKGROUND
 };
 
-static void color_for(GdkRGBA* dest, float ratio) {
+static void color_for(GdkRGBA* dest, double ratio) {
 	int r,g,b;
 	b = 0;
 	if(ratio >= 1) {
@@ -119,9 +119,9 @@ int main(int argc, char *argv[])
 		while(db_next_pending(&habit)) {
 			const char* elapsed = "never";
 			if(habit.has_performed) {
-				elapsed = readable_interval(habit.elapsed / 1000, false);
+				elapsed = readable_interval(habit.elapsed / 1000, true);
 				color_for(&thingy, (habit.elapsed - habit.frequency) /
-									habit.frequency);
+									(double)habit.frequency);
 			}
 
 			if(has_row == TRUE) {
@@ -169,9 +169,10 @@ int main(int argc, char *argv[])
 		return G_SOURCE_CONTINUE;
 	}
 
-	void complete_row(GtkTreeSelection *selection,
-                                     GtkTreeSelectionForeachFunc func,
-                                     gpointer data) {
+	void complete_row(GtkTreeModel *model,
+                                GtkTreePath *path,
+                                GtkTreeIter *iter,
+                                gpointer data) {
 		GValue ident = {};
 		gtk_tree_model_get_value(model, iter, IDENT, &ident);
 		assert(G_VALUE_HOLDS_INT64(&ident));
@@ -179,7 +180,7 @@ int main(int argc, char *argv[])
 	}
 
 	void on_didit() {
-		gtk_tree_selection_selected_foreach(items, complete_row, NULL);
+		gtk_tree_selection_selected_foreach(selection, complete_row, NULL);
 		update_intervals(NULL);
 	}
 
