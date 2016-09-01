@@ -1,5 +1,6 @@
 #include "new_habit.h"
 #include "db.h"
+#include "readable_interval.h"
 
 #include "new_habit.glade.h"
 
@@ -54,7 +55,8 @@ static void update_readable_frequency(void) {
 													&err, 10);
 	assert(err == NULL || *err == '\0');
 
-	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),readable_interval(frequency));
+	gtk_label_set_text(GTK_LABEL(stuff.readable_frequency),
+										 readable_interval(frequency));
 }
 
 static gboolean adjust_frequency(void* udata) {

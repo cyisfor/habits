@@ -1,5 +1,6 @@
 #include "db.h"
 #include "new_habit.h"
+#include "readable_interval.h"
 
 #include "checkup.glade.h"
 #include "litlen.h"
@@ -115,8 +116,7 @@ int main(int argc, char *argv[])
 		struct db_habit habit;
 		GdkRGBA thingy;
 		while(db_next_pending(&habit)) {
-			gchar* elapsed = NULL;
-			interval_stringify(&elapsed, habit.elapsed);
+			const char* elapsed = readable_interval(habit.elapsed / 1000);
 			if(habit.has_performed) {
 				color_for(&thingy, (habit.elapsed - habit.frequency) /
 									habit.frequency);
