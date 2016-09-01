@@ -1,5 +1,5 @@
 ldflags=`pkg-config sqlite3 gtk+-3.0 libnotify --libs`  -g
-cflags=`pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -Igen/
+cflags=`pkg-config sqlite3 gtk+-3.0 libnotify --cflags` -g -Igen/ -fdiagnostics-color=always
 
 rule program
   command = gcc $cflags -o $out $in $ldflags
@@ -10,6 +10,7 @@ rule object
 rule resource
   command = name=$name /home/code/data_to_header_string/pack $in >$out
 
+build obj/new_habit.o: object src/new_habit.c | gen/new_habit.glade.h
 build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
 build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h
 build gen/base.sql.h: resource sql/base.sql
@@ -18,7 +19,9 @@ build gen/pending.sql.h: resource sql/pending.sql
   name = pending_sql
 build gen/checkup.glade.h: resource checkup.glade.xml
   name = checkup_glade
+build gen/new_habit.glade.h: resource new_habit.glade.xml
+  name = new_habit_glade
 
-build checkup: program obj/checkup.o obj/db.o
+build checkup: program obj/checkup.o obj/db.o obj/new_habit.o
 
 default checkup

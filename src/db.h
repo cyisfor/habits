@@ -1,5 +1,6 @@
 #include <sqlite3.h>
 #include <stdbool.h>
+#include <stdlib.h> // ssize_t
 
 
 struct db_habit {

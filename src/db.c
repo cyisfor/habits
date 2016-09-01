@@ -14,6 +14,10 @@ sqlite3_stmt *set_enabled_stmt = NULL,
 	*next_pending_stmt = NULL,
 	*perform_stmt = NULL;
 
+sqlite3_stmt *create_find_stmt = NULL,
+	*create_update_stmt = NULL,
+	*create_insert_stmt = NULL;
+
 sqlite3* db = NULL;
 
 static sqlite3_int64 clock_now() {
@@ -118,4 +122,9 @@ void db_init(void) {
 	PREPARE(next_pending_stmt,pending_sql);
 	// XXX: must set elapsed to custom `now` - last_performed for query ordering
 	PREPARE(perform_stmt, "UPDATE habits SET last_performed = ?2 WHERE id = ?1");
+
+	PREPARE(create_find_stmt,"SELECT id FROM habits WHERE description = ?");
+	PREPARE(create_update_stmt,"UPDATE habits SET importance = ?, frequency = ? WHERE id = ?");
+	PREPARE(create_insert_stmt,"INSERT INTO habits (importance,frequency,description) VALUES (?,?,?)");
+	
 }
