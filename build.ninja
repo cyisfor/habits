@@ -45,7 +45,7 @@ rule template
   command = $env ./apply_template <$in >$out
 
 build sql/pending.sql: template sql/querying.template.sql | apply_template
-  env = env CRITERIA="enabled AND ( ( NOT has_performed ) OR  (frequency / 1.5 < elapsed) )"
+  env = env ENABLED="" CRITERIA="enabled AND ( ( NOT has_performed ) OR  (frequency / 1.5 < elapsed) )"
 
 build sql/searching.sql: template sql/querying.template.sql | apply_template
-  env = env CRITERIA="description LIKE ?1"
+  env = env ENABLED=", enabled" CRITERIA="description LIKE ?1"

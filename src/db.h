@@ -9,6 +9,7 @@ struct db_habit {
 	const char* description;
 	long frequency;
 	bool has_performed;
+	bool enabled;
 };
 
 void db_set_enabled(long ident, bool enabled);

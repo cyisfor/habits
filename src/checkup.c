@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 													 &row,
 													 IDENT, habit.ident,
 													 ELAPSED, elapsed,
-													 DISABLED, FALSE,
+													 DISABLED, habit.enabled ? FALSE : TRUE,
 													 NAME, habit.description,
 													 -1);
 			} else {
@@ -273,33 +273,41 @@ int main(int argc, char *argv[])
 	guint searcher = 0;
 	
 	gboolean search_for_stuff(void* udata) {
-		searcher = 0;
 		db_search(gtk_entry_get_text(GTK_ENTRY(search)),
 							gtk_entry_get_text_length(GTK_ENTRY(search)));
-		return G_SOURCE_CONTINUE;
+		searcher = 0;
+		return G_SOURCE_REMOVE;
 	}
 	
 	void search_later() {
 		if(searcher != 0) g_source_remove(searcher);
 		searcher = g_timeout_add(100,search_for_stuff,NULL);
 	}
+
+	gulong search_changer = 0;
 	
 	void switch_to_search() {
 		gtk_widget_hide(mainbox);
 		gtk_widget_show_all(searchbox);
-		g_signal_connect(search,"changed",search_later,NULL);
+		if(search_changer == 0)
+			search_changer = g_signal_connect(search,"changed",search_later,NULL);
 		search_for_stuff(NULL);
 	}
 
 	void switch_to_main() {
 		if(searcher) g_source_remove(searcher);
+		if(search_changer) {
+			g_signal_handler_disconnect(search, search_changer);
+			search_changer = 0;
+		}
 		gtk_widget_hide(searchbox);
 		gtk_widget_show_all(mainbox);
 		db_stop_searching();
+		update_intervals(NULL);
 	}
-	switch_to_main();
+	gtk_widget_hide(searchbox);
 	g_signal_connect(search_start,"clicked",switch_to_search,NULL);
-	
+	g_signal_connect(search_done,"clicked",switch_to_main,NULL);
 	gtk_main();
 	db_done();
 	return 0;

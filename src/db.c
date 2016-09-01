@@ -98,6 +98,7 @@ void db_stop_searching(void) {
 }
 
 void db_search(const char* query, ssize_t querylen) {
+	printf("searching %s\n",query);
 	sqlite3_reset(next_searching_stmt);
 	CHECK(sqlite3_bind_text(next_searching_stmt, 1, query, querylen, NULL));
 	searching = true;
@@ -122,6 +123,9 @@ bool db_next(struct db_habit* self) {
 	self->has_performed = sqlite3_column_int(stmt, 3) != 0;
 	if(self->has_performed) {
 		self->elapsed = sqlite3_column_int64(stmt, 4);
+	}
+	if(searching) {
+		self->enabled = sqlite3_column_int(stmt,5) != 0;
 	}
 	return true;
 }
