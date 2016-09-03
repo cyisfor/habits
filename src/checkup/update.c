@@ -1,0 +1,97 @@
+#include "db.h"
+
+#include <glib.h> // G_SOURCE_CONTINUE etc
+#include <gtk/gtk.h>
+
+enum Column {
+	NAME,
+	ELAPSED,
+	DISABLED,
+	DANGER,
+	IDENT,
+	BACKGROUND
+};
+
+static void color_for(GdkRGBA* dest, double ratio) {
+	double r,g,b;
+	b = 0;
+	if(ratio >= 1) {
+		g = 0;
+		r = 1;
+	} else if(ratio <= -1) {
+		g = 1;
+		r = 0;
+	} else {
+		g = -0.5 * (ratio - 1);
+		r = 0.5 * (ratio + 1);
+	}
+	dest->red = r;
+	dest->green = g;
+	dest->blue = b;
+}
+
+#define COLOR(name, r,g,b,a) GdkRGBA name = { .red = r, .green = g, .blue = b, .alpha = a };
+
+COLOR(black,0,0,0,0);
+COLOR(grey,0.95,0.95,0.95,1.0);
+COLOR(white,1,1,1,1);
+
+int update_intervals(gpointer udata) {
+	DEFINE_THIS(GtkTreeModel);
+	GtkTreeIter row;
+	bool has_row = gtk_tree_model_get_iter_first(this, &row);
+	struct db_habit habit;
+	GdkRGBA thingy;
+	bool odd = false;
+	while(db_next(&habit)) {
+		const char* elapsed = "never";
+		if(habit.has_performed) {
+			elapsed = readable_interval(habit.elapsed / 1000, true);
+			color_for(&thingy, (habit.elapsed - habit.frequency) /
+								(double)habit.frequency);
+		}
+
+		if(has_row == TRUE) {
+			gtk_list_store_set(GTK_LIST_STORE(this),
+												 &row,
+												 IDENT, habit.ident,
+												 ELAPSED, elapsed,
+												 DISABLED, habit.enabled ? FALSE : TRUE,
+												 NAME, habit.description,
+												 -1);
+		} else {
+			GdkRGBA* background;
+			if(odd) {
+				background = &grey;
+			} else {
+				background = &white;
+			}
+			odd = !odd;
+			gtk_list_store_insert_with_values
+				(GTK_LIST_STORE(this),
+				 &row,
+				 -1,
+				 IDENT, habit.ident,
+				 DISABLED, FALSE,
+				 ELAPSED, elapsed,
+				 BACKGROUND, background,
+				 NAME, habit.description,
+				 -1);
+		}
+		if(habit.has_performed) {
+			gtk_list_store_set(GTK_LIST_STORE(this),
+												 &row,
+												 DANGER, &thingy,
+												 -1);
+		}
+		has_row = gtk_tree_model_iter_next(this,&row);
+	}
+	// take off expired this at the end
+	if(has_row) {
+		//has_row = gtk_tree_model_iter_next(this, &row);
+		while(has_row) {
+			has_row = gtk_list_store_remove(GTK_LIST_STORE(this), &row);
+		}
+	}
+	return G_SOURCE_CONTINUE;
+}
