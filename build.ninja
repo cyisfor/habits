@@ -14,10 +14,21 @@ rule object
 rule resource
   command = name=$name $pack/pack $in >$out
 
-build obj/new_habit.o: object src/new_habit.c | gen/new_habit.glade.h
-build obj/checkup.o: object src/checkup.c | gen/checkup.glade.h
+build obj/checkup/new_habit.o: object src/checkup/new_habit.c | gen/new_habit.glade.h
+build obj/checkup/main.o: object src/checkup/main.c | gen/checkup.glade.h
+  cflags = $cflags -Isrc
+build obj/checkup/poke.o: object src/checkup/poke.c
+  cflags = $cflags -Isrc
+build obj/checkup/disabled.o: object src/checkup/disabled.c
+build obj/checkup/prettify.o: object src/checkup/prettify.c
+  cflags = $cflags -Isrc
+build obj/checkup/update.o: object src/checkup/update.c
+build obj/checkup/search.o: object src/checkup/search.c
+
 build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h gen/searching.sql.h
+
 build obj/readable_interval.o: object src/readable_interval.c
+
 build gen/base.sql.h: resource sql/base.sql | $pack/pack
   name = base_sql
 build gen/pending.sql.h: resource sql/pending.sql | $pack/pack
@@ -33,10 +44,9 @@ build $pack/pack: program $pack/main.c | $pack/specialescapes.c
 build $pack/specialescapes.c: run $pack/make_specialescapes
 build $pack/make_specialescapes: program $pack/make_specialescapes.c
 
-build checkup: program obj/checkup.o obj/db.o obj/new_habit.o obj/readable_interval.o
+build checkup: program obj/checkup/main.o obj/checkup/poke.o obj/checkup/prettify.o obj/checkup/update.o obj/checkup/search.o obj/db.o obj/new_habit.o obj/readable_interval.o
 
 default checkup
-
 
 build apply_template: program obj/apply_template.o
 build obj/apply_template.o: object src/apply_template.c

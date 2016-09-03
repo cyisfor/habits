@@ -1,4 +1,5 @@
 #include "db.h"
+#include "define_this.h"
 
 #include <glib.h> // G_SOURCE_CONTINUE etc
 #include <gtk/gtk.h>
