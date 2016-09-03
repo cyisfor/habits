@@ -76,57 +76,9 @@ int main(int argc, char *argv[])
 	gtk_window_stick(GTK_WINDOW(top));
 	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
 
-	void on_notify_closed(NotifyNotification* n, gpointer udata) {
-		gint reason;
-		g_object_get(n,
-								 "closed-reason",
-								 &reason,
-								 NULL);
-		if(reason == 2) {
-			gtk_window_present(GTK_WINDOW(top));
-			gtk_widget_grab_focus(top);
-		}
-	}
-
-	int poke_me(void* udata) {
-		GtkTreeIter iter;
-		if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
-			return G_SOURCE_CONTINUE;
-		int cutoff = 2;
-		long rando = random();
-		for(;;) {
-			long derp = rando%cutoff;
-			//printf("derp %d %ld %ld\n",cutoff,derp,rando % 1000);
-			if(0 != derp) {
-				break;
-			}
-			if(FALSE==gtk_tree_model_iter_next(items, &iter)) {
-				gtk_tree_model_get_iter_first(items,&iter);
-				break;
-			}
-			++cutoff;
-		}
-		GValue label = {},
-			ident = {};
-		gtk_tree_model_get_value(items,
-														 &iter,
-														 0,
-														 &label);
-		gtk_tree_model_get_value(items,
-														 &iter,
-														 1,
-														 &ident);
-		NotifyNotification* n = notify_notification_new
-			("",
-			 g_value_get_string(&label),
-			 "task-due");
-		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
-		GError* err = NULL;
-		if(FALSE==notify_notification_show(n, &err)) {
-			error(0,0,err->message);
-		}
-		return G_SOURCE_CONTINUE;
-	}
+	struct poke_info poke_info = {
+		items: items,
+	};
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);
@@ -241,20 +193,17 @@ int main(int argc, char *argv[])
 	}
 	g_signal_connect(disabled,"toggled",G_CALLBACK(disabled_toggled),NULL);
 
-	guint updater = 0,
-		poker = 0;
+	guint updater = 0;
 
 	void start() {
 		if(updater==0)
 			updater = g_timeout_add_seconds(1, update_intervals, NULL);
-		if(poker==0)
-			poker = g_timeout_add_seconds(600, poke_me, NULL);
+		poke_start(poke_info);
 	}
 	void stop() {
 		if(updater) g_source_remove(updater);
-		if(poker) g_source_remove(poker);
+		poke_stop(poke_info);
 		updater = 0;
-		poker = 0;
 	}
 
 	void on_update_toggled() {
