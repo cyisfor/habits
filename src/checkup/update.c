@@ -39,7 +39,7 @@ COLOR(white,1,1,1,1);
 int update_intervals(gpointer udata) {
 	DEFINE_THIS(GtkTreeModel);
 	GtkTreeIter row;
-	bool has_row = gtk_tree_model_get_iter_first(this, &row);
+	bool has_row = gtk_tree_model_get_iter_first(this->items, &row);
 	struct db_habit habit;
 	GdkRGBA thingy;
 	bool odd = false;
@@ -52,7 +52,7 @@ int update_intervals(gpointer udata) {
 		}
 
 		if(has_row == TRUE) {
-			gtk_list_store_set(GTK_LIST_STORE(this),
+			gtk_list_store_set(GTK_LIST_STORE(this->items),
 												 &row,
 												 IDENT, habit.ident,
 												 ELAPSED, elapsed,
@@ -68,7 +68,7 @@ int update_intervals(gpointer udata) {
 			}
 			odd = !odd;
 			gtk_list_store_insert_with_values
-				(GTK_LIST_STORE(this),
+				(GTK_LIST_STORE(this->items),
 				 &row,
 				 -1,
 				 IDENT, habit.ident,
@@ -79,19 +79,31 @@ int update_intervals(gpointer udata) {
 				 -1);
 		}
 		if(habit.has_performed) {
-			gtk_list_store_set(GTK_LIST_STORE(this),
+			gtk_list_store_set(GTK_LIST_STORE(this->items),
 												 &row,
 												 DANGER, &thingy,
 												 -1);
 		}
-		has_row = gtk_tree_model_iter_next(this,&row);
+		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
-	// take off expired this at the end
+	// take off expired this->items at the end
 	if(has_row) {
-		//has_row = gtk_tree_model_iter_next(this, &row);
+		//has_row = gtk_tree_model_iter_next(this->items, &row);
 		while(has_row) {
-			has_row = gtk_list_store_remove(GTK_LIST_STORE(this), &row);
+			has_row = gtk_list_store_remove(GTK_LIST_STORE(this->items), &row);
 		}
 	}
 	return G_SOURCE_CONTINUE;
+}
+
+void update_start(struct update_info* this) {
+	if(this->updater==0)
+		this->updater = g_timeout_add_seconds(1, update_intervals, this);
+}
+
+void update_stop(struct update_info* this) {
+	if(this->updater!=0) {
+		g_source_remove(this->updater);
+		this->updater = 0;
+	}
 }
