@@ -79,70 +79,13 @@ int main(int argc, char *argv[])
 	struct poke_info poke_info = {
 		items: items,
 	};
+	struct update_info update_info = {
+	};
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);
 	}
 
-
-	int update_intervals(void* udata) {
-		GtkTreeIter row;
-		bool has_row = gtk_tree_model_get_iter_first(items, &row);
-		struct db_habit habit;
-		GdkRGBA thingy;
-		bool odd = false;
-		while(db_next(&habit)) {
-			const char* elapsed = "never";
-			if(habit.has_performed) {
-				elapsed = readable_interval(habit.elapsed / 1000, true);
-				color_for(&thingy, (habit.elapsed - habit.frequency) /
-									(double)habit.frequency);
-			}
-
-			if(has_row == TRUE) {
-				gtk_list_store_set(GTK_LIST_STORE(items),
-													 &row,
-													 IDENT, habit.ident,
-													 ELAPSED, elapsed,
-													 DISABLED, habit.enabled ? FALSE : TRUE,
-													 NAME, habit.description,
-													 -1);
-			} else {
-				GdkRGBA* background;
-				if(odd) {
-					background = &grey;
-				} else {
-					background = &white;
-				}
-				odd = !odd;
-				gtk_list_store_insert_with_values
-					(GTK_LIST_STORE(items),
-					 &row,
-					 -1,
-					 IDENT, habit.ident,
-					 DISABLED, FALSE,
-					 ELAPSED, elapsed,
-					 BACKGROUND, background,
-					 NAME, habit.description,
-					 -1);
-			}
-			if(habit.has_performed) {
-				gtk_list_store_set(GTK_LIST_STORE(items),
-													 &row,
-													 DANGER, &thingy,
-													 -1);
-			}
-			has_row = gtk_tree_model_iter_next(items,&row);
-		}
-		// take off expired items at the end
-		if(has_row) {
-			//has_row = gtk_tree_model_iter_next(items, &row);
-			while(has_row) {
-				has_row = gtk_list_store_remove(GTK_LIST_STORE(items), &row);
-			}
-		}
-		return G_SOURCE_CONTINUE;
-	}
 
 	void complete_row(GtkTreeModel *model,
                                 GtkTreePath *path,
@@ -157,7 +100,7 @@ int main(int argc, char *argv[])
 	void on_didit() {
 		gtk_tree_selection_selected_foreach(selection, complete_row, NULL);
 		gtk_tree_selection_unselect_all(selection);
-		update_intervals(NULL);
+		update_intervals(update_info);
 	}
 
 	g_signal_connect(didit, "clicked",G_CALLBACK(on_didit), NULL);
@@ -193,17 +136,13 @@ int main(int argc, char *argv[])
 	}
 	g_signal_connect(disabled,"toggled",G_CALLBACK(disabled_toggled),NULL);
 
-	guint updater = 0;
-
 	void start() {
-		if(updater==0)
-			updater = g_timeout_add_seconds(1, update_intervals, NULL);
+		update_start(update_info);
 		poke_start(poke_info);
 	}
 	void stop() {
-		if(updater) g_source_remove(updater);
+		update_stop(update_info);
 		poke_stop(poke_info);
-		updater = 0;
 	}
 
 	void on_update_toggled() {
@@ -214,7 +153,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(update), TRUE);
-	update_intervals(NULL);
+	update_intervals(update_info);
 	start();
 	g_signal_connect(update, "toggled", on_update_toggled, NULL);
 

@@ -1,20 +1,23 @@
-#include "context_shortcuts.h"
+#include "poke.h"
+#include "define_this.h"
 
-void on_notify_closed(NotifyNotification* n, gpointer udata) {
+static void on_notify_closed(NotifyNotification* n, gpointer udata) {
+	DEFINE_THIS(GtkWindow);
 	gint reason;
 	g_object_get(n,
 							 "closed-reason",
 							 &reason,
 							 NULL);
 	if(reason == 2) {
-		gtk_window_present(GTK_WINDOW(top));
-		gtk_widget_grab_focus(top);
+		gtk_window_present(this);
+		gtk_widget_grab_focus(GTK_WIDGET(this));
 	}
 }
 
 int poke_me(gpointer udata) {
+	DEFINE_THIS(struct poke_info);
 	GtkTreeIter iter;
-	if(FALSE == gtk_tree_model_get_iter_first(items, &iter))
+	if(FALSE == gtk_tree_model_get_iter_first(this->items, &iter))
 		return G_SOURCE_CONTINUE;
 	int cutoff = 2;
 	long rando = random();
@@ -24,30 +27,41 @@ int poke_me(gpointer udata) {
 		if(0 != derp) {
 			break;
 		}
-		if(FALSE==gtk_tree_model_iter_next(items, &iter)) {
-			gtk_tree_model_get_iter_first(items,&iter);
+		if(FALSE==gtk_tree_model_iter_next(this->items, &iter)) {
+			gtk_tree_model_get_iter_first(this->items,&iter);
 			break;
 		}
 		++cutoff;
 	}
-	GValue label = {},
-		ident = {};
-		gtk_tree_model_get_value(items,
-														 &iter,
-														 0,
-														 &label);
-		gtk_tree_model_get_value(items,
-														 &iter,
-														 1,
-														 &ident);
-		NotifyNotification* n = notify_notification_new
-			("",
-			 g_value_get_string(&label),
-			 "task-due");
-		g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
-		GError* err = NULL;
-		if(FALSE==notify_notification_show(n, &err)) {
-			error(0,0,err->message);
-		}
-		return G_SOURCE_CONTINUE;
+	GValue label = {}, ident = {};
+	gtk_tree_model_get_value(this->items,
+													 &iter,
+													 0,
+													 &label);
+	gtk_tree_model_get_value(this->items,
+													 &iter,
+													 1,
+													 &ident);
+	NotifyNotification* n = notify_notification_new
+		("",
+		 g_value_get_string(&label),
+		 "task-due");
+	g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
+	GError* err = NULL;
+	if(FALSE==notify_notification_show(n, &err)) {
+		error(0,0,err->message);
+	}
+	return G_SOURCE_CONTINUE;
+}
+
+void poke_start(struct poke_info* this) {
+	if(this->poker==0)
+		this->poker = g_timeout_add_seconds(600, poke_me, this);
+}
+
+void poke_stop(struct poke_info* this) {
+	if(this->poker) {
+		g_source_remove(this->poker);
+		this->poker = 0;
+	}
 }
