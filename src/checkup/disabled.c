@@ -1,7 +1,12 @@
+#include "disabled.h"
+#include "define_this.h"
+#include <assert.h>
+#include "update.h"
+
 void
 disabled_toggled (GtkCellRendererToggle *cell_renderer,
 									gchar                 *spath,
-									gpointer               user_data) {
+									gpointer               udata) {
 	DEFINE_THIS(GtkTreeModel);
 	GtkTreePath* path = gtk_tree_path_new_from_string(spath);
 	GtkTreeIter iter;

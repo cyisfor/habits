@@ -1,6 +1,11 @@
 #include "poke.h"
 #include "define_this.h"
 
+#include <libnotify/notify.h>
+#include <stdlib.h> // random
+#include <error.h>
+
+
 static void on_notify_closed(NotifyNotification* n, gpointer udata) {
 	DEFINE_THIS(GtkWindow);
 	gint reason;
@@ -14,7 +19,7 @@ static void on_notify_closed(NotifyNotification* n, gpointer udata) {
 	}
 }
 
-int poke_me(gpointer udata) {
+static int poke_me(gpointer udata) {
 	DEFINE_THIS(struct poke_info);
 	GtkTreeIter iter;
 	if(FALSE == gtk_tree_model_get_iter_first(this->items, &iter))

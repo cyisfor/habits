@@ -20,11 +20,13 @@ build obj/checkup/main.o: object src/checkup/main.c | gen/checkup.glade.h
 build obj/checkup/poke.o: object src/checkup/poke.c
   cflags = $cflags -Isrc
 build obj/checkup/disabled.o: object src/checkup/disabled.c
+  cflags = $cflags -Isrc
 build obj/checkup/prettify.o: object src/checkup/prettify.c
   cflags = $cflags -Isrc
 build obj/checkup/update.o: object src/checkup/update.c
+  cflags = $cflags -Isrc
 build obj/checkup/search.o: object src/checkup/search.c
-
+  cflags = $cflags -Isrc
 build obj/db.o: object src/db.c | gen/base.sql.h gen/pending.sql.h gen/searching.sql.h
 
 build obj/readable_interval.o: object src/readable_interval.c
@@ -44,7 +46,7 @@ build $pack/pack: program $pack/main.c | $pack/specialescapes.c
 build $pack/specialescapes.c: run $pack/make_specialescapes
 build $pack/make_specialescapes: program $pack/make_specialescapes.c
 
-build checkup: program obj/checkup/main.o obj/checkup/poke.o obj/checkup/prettify.o obj/checkup/update.o obj/checkup/search.o obj/db.o obj/new_habit.o obj/readable_interval.o
+build checkup: program obj/checkup/main.o obj/checkup/poke.o obj/checkup/prettify.o obj/checkup/update.o obj/checkup/search.o obj/checkup/disabled.o obj/db.o obj/new_habit.o obj/readable_interval.o
 
 default checkup
 

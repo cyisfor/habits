@@ -1,17 +1,10 @@
+#include "update.h"
+
 #include "db.h"
 #include "define_this.h"
 
 #include <glib.h> // G_SOURCE_CONTINUE etc
 #include <gtk/gtk.h>
-
-enum Column {
-	NAME,
-	ELAPSED,
-	DISABLED,
-	DANGER,
-	IDENT,
-	BACKGROUND
-};
 
 static void color_for(GdkRGBA* dest, double ratio) {
 	double r,g,b;
@@ -38,7 +31,7 @@ COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
 int update_intervals(gpointer udata) {
-	DEFINE_THIS(GtkTreeModel);
+	DEFINE_THIS(struct update_info);
 	GtkTreeIter row;
 	bool has_row = gtk_tree_model_get_iter_first(this->items, &row);
 	struct db_habit habit;

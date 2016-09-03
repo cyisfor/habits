@@ -5,4 +5,5 @@ struct poke_info {
 	guint poker;
 };
 
-int poke_me(gpointer udata);
+void poke_start(struct poke_info*);
+void poke_stop(struct poke_info*);
