@@ -56,6 +56,8 @@ int main(int argc, char *argv[])
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
+
+	poke_init(b);
 	#define GETFULL(type,conv,name) \
 		type* name = conv(gtk_builder_get_object(b, #name))
 	#define GET(name) GETFULL(GtkWidget, GTK_WIDGET, name)
