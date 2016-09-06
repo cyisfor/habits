@@ -1,17 +1,8 @@
 #include "$(ELEMENT_TYPE)_array.h"
 
 // va_list can't be rewinded (because C is retarded)
-typedef struct {
-#ifdef BY_VALUE
-	$(ELEMENT_TYPE)* items;
-#else
-	$(ELEMENT_TYPE)** items;
-#endif
-	size_t length;
-	size_t space;
-} $(ELEMENT_TYPE)_array;
 
-static void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* self) {
+void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* self) {
 	++self->length; // we set this item previously
 	if(self->length == self->space) {
 		self->space += 0x100;
@@ -20,13 +11,13 @@ static void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* self) {
 	}
 }
 
-static void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* self) {
+void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* self) {
 	self->space = self->length;
 	self->items = realloc(self->items,
 													sizeof(*self->items)*self->space);
 }
 
-static void va_list_to$(ELEMENT_TYPE)_arrayv
+void va_list_to$(ELEMENT_TYPE)_arrayv
 ($(ELEMENT_TYPE)_array* self, va_list args) {
 	size_t space = 0;
 	for(;;) {
@@ -46,7 +37,8 @@ static void va_list_to$(ELEMENT_TYPE)_arrayv
 
 // this function will ONLY work if your function has exactly 1
 // non-variadic parameter.
-static void va_list_to_$(ELEMENT_TYPE)s* self, ...) {
+void va_list_to_$(ELEMENT_TYPE)s
+		 ($(ELEMENT_TYPE)_array* self, ...) {
 	va_list args;
 	va_start(args,self);
 	va_list_to$(ELEMENT_TYPE)_arrayv(self,args);
@@ -54,7 +46,7 @@ static void va_list_to_$(ELEMENT_TYPE)s* self, ...) {
 }
 
 // define this somewhere
-void $(ELEMENT_TYPE)_free(ELEMENT_TYPE*);
+void $(ELEMENT_TYPE)_free($(ELEMENT_TYPE));
 
 void $(ELEMENT_TYPE)_array_clear($(ELEMENT_TYPE)_array* self) {
 	int i = 0;

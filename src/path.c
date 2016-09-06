@@ -1,6 +1,10 @@
 #include "path.h"
+#include "myassert/assert.h"
 
 #include <stdarg.h>
+#include <string.h>
+#include <stdlib.h> // ssize_t
+#include <sys/stat.h> // mkdir
 
 
 const char* add_ext(const char* name, const char* ext) {
@@ -20,12 +24,12 @@ char* build_beeg_path(const char* head, ...) {
 	ssize_t space = strlen(head);
 	ssize_t len = space;
 	va_list args;
-	va_start(head, args);
+	va_start(args, head);
 	for(;;) {
 		const char* component = va_arg(args, const char*);
 		if(component == NULL) return result;
 		// assure that the directory exists for this component.
-		mkdir(result);
+		mkdir(result,0755);
 		// don't assure that the final component is a directory
 		// (since it's probably a file)
 		ssize_t clen = strlen(component);
@@ -35,7 +39,7 @@ char* build_beeg_path(const char* head, ...) {
 				if(needed < 0x100) needed = 0x100;
 				// try to keep space at even 0x100 multiples...
 				space = ((space + needed) >> 8) <<8;
-			} until(len + clen + 2 < space);
+			} while(len + clen + 2 >= space);
 			result = realloc(result,space);
 		}
 		result[len] = '/'; // was \0
