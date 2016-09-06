@@ -1,5 +1,8 @@
 #include "path.h"
 
+#include "string_array.h"
+#include "target_array.h"
+
 #include <sys/stat.h>
 #include <stdbool.h>
 
@@ -8,15 +11,6 @@ typedef struct {
 	struct stat info;
 	bool updated;
 } target;
-
-#define ELEMENT_TYPE target
-#include "array.c"
-#undef ELEMENT_TYPE
-
-typedef const char* string;
-#define ELEMENT_TYPE string
-#include "array.c"
-#undef ELEMENT_TYPE
 
 string_array cflags;
 string_array ldflags;
@@ -84,44 +78,39 @@ void build_program(const char* dest, target_array objects) {
 	execvp(args[0],args);
 }
 
-void target_array_clear(target_array args) {
-	int i = 0;
-	for(;i<args.length;++i) {
-		target_free(args.items[i]);
-	}
-	free(args.items);
-	args.length = 0;
-	args.space = 0;
-	args.items = NULL; // just in case
-}
 
+// MUST use a malloc'd path for every target_alloc...
 target* target_alloc(char* path) {
 	target->path = path;
 	target->updated = (0 == stat(target->path,&target->info));
 }
 
 void target_free(target* target) {
+	free(target->path);
 	free(target);
 }
 
-bool depends(target* dest, target* source) {
-	if(dest->updated) {
-		return true;
+target* depends(target* dest, target* source) {
+	// only call this when you can respond to ->updated by building
+	if(!dest->updated) {
+		if(left_is_older(dest->info, source->info)) {
+			// dest->build()
+			dest->updated = true;
+		}
 	}
-	if(left_is_older(dest->info, source->info)) {
-		dest->updated = true;
-		return true;
-	}
-	return false;
+	return dest;
 }
 
 /* only return a target when it has been COMPLETELY built and updated */
-target* program(const char* name) {
-	target* target = target_alloc(build_path("bin",name));
-	target* main_source = target_alloc(build_path(src,add_ext(name,"c")));
-	if(depends(target,main_source)) {
-		build_program(target->path, args);
-	} 
+
+target* program(const char* name, target_array objects) {
+	target* target = target_alloc(build_path2("bin",name));
+	int i;
+	for(i=0;i<objects.length;++i) {
+		if(depends(target,objects.items[i])) {
+			build_program(target->path, objects);
+		}
+	}
 	return target;
 }
 
@@ -151,23 +140,13 @@ const char* object_src = "src/";
 
 struct target* object(const char* name) {
 	target* target = target_alloc(build_path(object_obj,add_ext(name,"o")));
-	target* source = target_alloc(build_path(object_src,name));
-	if(depends(target,source)) {
-		build_object(target->path, source);
-	} else {
-		va_list headers;
-		va_start(headers, name);
-		for(;;) {
-			target* header = va_arg(headers,target*);
-			if(left_is_older(target->info,header->info)) {
-				build_object(target->path, source->path);
-				target->updated = true;
-				break;
-			}
-		}
+	target source = {
+		.path: build_path(object_src,name)
 	}
-
-	assert(target->updated == false);
+	if(depends(target,&source)) {
+		build_object(target->path, source.path);
+	}
+	free(source.path); // ehhh
 	return target;
 }
 
@@ -195,17 +174,23 @@ void do_generate(const char* exe, const char* target, const char* source) {
 	free(temp);
 }
 
+target* resource_exe = NULL;
+
 void generate_resource(const char* name,
 											 const char* target,
 											 const char* source) {
 	setenv("name",name);
-	do_generate("./data_to_header_string/pack",target,source);
+	do_generate(resource_exe->path,target,source);
 }
 
-struct target* resource(const char* name, target* source) {
+struct target* resource(const char* name, const char* source) {
 	target* target = target_alloc(build_path("gen",add_ext(name,"h")));
-	if(depends(target,source)) {
-		generate_resource(name, target->path, source->path);
+	target starget = {
+		.path: source
+	};
+	assert(0==stat(source,&starget.info));
+	if(depends(target,resource_exe) || depends(target,&starget)) {
+		generate_resource(name, target->path, source);
 	}
 	return target;
 }
@@ -221,61 +206,140 @@ struct target* generate(const char* dest, target* program) {
 target* template_exe = NULL;
 struct target* template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
-	target* target = target_alloc(dest);
-	target source = {
+	target* target = target_alloc(build_path("gen",dest));
+	target starget = {
 		.path: source,
 	};
-	assert(0==stat(source.path,&source.info));
-	if(depends(target,template_exe) || depends(target,source)) {
+	assert(0==stat(source,&starget.info));
+	if(depends(target,template_exe) || depends(target,&starget)) {
 		va_list args;
 		va_start(source, args);
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
 									 open(source,O_RDONLY),args);
 		va_end(args);
 		rename(temp,dest);
-		return target;
 	}
-
+	return target;
+}
 
 int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
-	struct {
+	struct SH {
 		target* source;
 		target* header;
-	} string_array ;
-	string_array.source = template("gen/string_array.c",
+	};
+
+	struct SH sa, ta;
+
+	target_array o;
+	= object("apply_template");
+	template_exe = depends(program("apply_template"),o);
+	free(o);
+
+	object_src = "gen/";
+	mkdir(object_src);
+	sa.source = template("gen/string_array.c",
 																 "src/array.template.c",
 																 "ELEMENT_TYPE", "const char*",
 																 NULL);
-	string_array.header = template("gen/string_array.h",
+	sa.header = template("gen/string_array.h",
 																 "src/array.template.h",
 																 "ELEMENT_TYPE", "const char*",
 																 NULL);
-	if(program("make",
-						 object("apply_template", string_array.header),
-						 object("string_array",string_array.source)).updated) {
+	target* string_array = depends(object("string_array"),string_array.source);
+
+	ta.source = template("gen/target_array.c",
+																 "src/array.template.c",
+																 "ELEMENT_TYPE", "target",
+																 NULL);
+	ta.header = template("gen/target_array.h",
+																 "src/array.template.h",
+																 "ELEMENT_TYPE", "target",
+																 "INCLUDES", "#include \"target.h\""
+																 NULL);
+
+	target* target_array = depends(object("target_array"),target_array.source);
+	
+	object_src = "src/";
+
+	o = depends(object("make"),sa.header);
+
+	if(program("make",o, string_array, NULL).updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
+	target_free(o);
 
+
+#define PACK "./data_to_header/"
+	object_src = PACK;
+	o = object("make_specialescapes");
+	target* e = depends(program(PACK"/make_specialescapes"),o);
+	target_free(o);
+	target* special_escapes = generate(PACK"specialescapes.c", e);
+	target_free(e);
+	
+	resource_exe = depends(program("./data_to_header_string/pack"),
+												 depends(object("main.c"),
+																 special_escapes));
+
+	target* base_sql = resource("base_sql","sql/base.sql");
+	target* pending_sql = resource("pending_sql","sql/pending.sql");
+	target* searching_sql = resource("searching_sql","sql/searching.sql");
+
+	object_src = "src/";
+	
+	target* myassert = object("myassert");
+	
+	target* objects[] = {
+		depends(depends(depends(object("db"),
+														base_sql),
+										pending_sql),
+						searching_sql),
+		object("readable_interval"),
+		object("path"),
+		myassert
+	};
+
+	string_array_push(cflags);
+	cflags.items[cflags.length] = "-Isrc";
+	object_obj = build_path("obj","checkup");
+	object_src = "src/checkup";
+
+	struct {
+		target* new_habit;
+		target* checkup;
+	} glade = {
+		resource("new_habit_glade","new_habit.glade.xml"),
+		resource("checkup_glade","checkup.glade.xml")
+	};
+	
+	target* checkups[] = {
+		depends(object("main"),glade.checkup),
+		object("poke"),
+		object("disabled"),
+		object("prettify"),
+		object("update"),
+		object("search"),
+		depends(object("new_habit"),glade.new_habit),
+	};
+
+	target* checkup = program("checkup",checkups,objects,NULL);
+	for(i=0;i<NUM(checkups);++i) {
+		depends(checkup,checkups[i]);
+	}
+	for(i=0;i<NUM(objects);++i) {
+		depends(checkup,objects[i]);
+	}
+	
 	program("checkup",
 					object(
 
-		template("sql/pending.sql",
-					 "sql/querying.template.sql",
-					 "",
-					 "enabled AND ( ( NOT has_performed ) OR (frequency / 1.5 < elapsed))");
-	template("sql/searching.sql",
-					 "sql/querying.template.sql",
-					 ", enabled",
-					 "description LIKE ?1");
 
 	generate("gen/checkup.glade.h","checkup.glade.xml");
 	object_src = "src/checkup/";
 	object_obj = "obj/checkup/";
-	string_array_push(cflags);
-	cflags.items[cflags.length] = "-Isrc";
 
 	for(i=0;i<NUM(checkups);++i) {
 		object(checkups[i]);

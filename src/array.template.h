@@ -19,3 +19,5 @@ static void va_list_to$(ELEMENT_TYPE)_arrayv
 // this function will ONLY work if your function has exactly 1
 // non-variadic parameter.
 static void va_list_to_$(ELEMENT_TYPE)s* result, ...);
+
+void $(ELEMENT_TYPE)_array_clear($(ELEMENT_TYPE)_array* self);

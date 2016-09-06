@@ -8,44 +8,58 @@ typedef struct {
 	size_t space;
 } $(ELEMENT_TYPE)_array;
 
-static void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* result) {
-	++result->length; // we set this item previously
-	if(result->length == result->space) {
-		result->space += 0x100;
-		result->items = realloc(result->items,
-														sizeof(*result->items)*result->space);
+static void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* self) {
+	++self->length; // we set this item previously
+	if(self->length == self->space) {
+		self->space += 0x100;
+		self->items = realloc(self->items,
+														sizeof(*self->items)*self->space);
 	}
 }
 
-static void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* result) {
-	result->space = result->length;
-	result->items = realloc(result->items,
-													sizeof(*result->items)*result->space);
+static void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* self) {
+	self->space = self->length;
+	self->items = realloc(self->items,
+													sizeof(*self->items)*self->space);
 }
 
 static void va_list_to$(ELEMENT_TYPE)_arrayv
-($(ELEMENT_TYPE)_array* result, va_list args) {
+($(ELEMENT_TYPE)_array* self, va_list args) {
 	size_t space = 0;
 	for(;;) {
-		$(ELEMENT_TYPE)_array_push(result);
+		$(ELEMENT_TYPE)_array_push(self);
 #ifdef BY_VALUE
 		$(ELEMENT_TYPE)* value = va_arg(args, $(ELEMENT_TYPE)*);
 		if(value == NULL) break;
-		memcpy(&result->items[result->length],value,sizeof($(ELEMENT_TYPE)));
+		memcpy(&self->items[self->length],value,sizeof($(ELEMENT_TYPE)));
 #else
 		$(ELEMENT_TYPE) value = va_arg(args,$(ELEMENT_TYPE));
 		if(value == NULL) break;
-		result->items[result->length] = value;
+		self->items[self->length] = value;
 #endif
 	}
-	$(ELEMENT_TYPE)_array_done_pushing(result);
+	$(ELEMENT_TYPE)_array_done_pushing(self);
 }
 
 // this function will ONLY work if your function has exactly 1
 // non-variadic parameter.
-static void va_list_to_$(ELEMENT_TYPE)s* result, ...) {
+static void va_list_to_$(ELEMENT_TYPE)s* self, ...) {
 	va_list args;
-	va_start(args,result);
-	va_list_to$(ELEMENT_TYPE)_arrayv(result,args);
+	va_start(args,self);
+	va_list_to$(ELEMENT_TYPE)_arrayv(self,args);
 	va_end(args);
+}
+
+// define this somewhere
+void $(ELEMENT_TYPE)_free(ELEMENT_TYPE*);
+
+void $(ELEMENT_TYPE)_array_clear($(ELEMENT_TYPE)_array* self) {
+	int i = 0;
+	for(;i<self->length;++i) {
+		$(ELEMENT_TYPE)_free(self->items[i]);
+	}
+	free(self->items);
+	self->length = 0;
+	self->space = 0;
+	self->items = NULL; // just in case
 }
