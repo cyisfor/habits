@@ -309,7 +309,7 @@ void generate_resource(const char* name,
 	do_generate(resource_exe->path,target,source);
 }
 
-target resource(const char* name, target* source) {
+target resource(const char* name, target source) {
 	target self = target_alloc(build_path("gen",add_ext(name,"h")));
 	if(depends(self,resource_exe)->updated || depends(self,source)->updated) {
 		generate_resource(name, self->path, source->path);
@@ -342,6 +342,11 @@ target template(const char* dest, const char* source, ...) {
 		printf("template %s -> %s\n",source,self->path);
 	}
 	return self;
+}
+
+target file(const char* path) {
+	// uhhh
+	return target_alloc(strdup(path));
 }
 
 int main(int argc, char *argv[])
@@ -400,16 +405,6 @@ int main(int argc, char *argv[])
 	target_PUSH(o, myassert);
 	target_PUSH(o, path);
 
-	target make = program("make",o);
-	if(make->updated) {
-		puts("updoot");
-		assert(getenv("retryderp")==NULL);
-		setenv("retryderp","1",1);
-		execvp(argv[0],argv);
-	}
-	target_array_clear(&o);
-
-
 #define PACK "./data_to_header_string"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
@@ -419,10 +414,19 @@ int main(int argc, char *argv[])
 		target special_escapes = generate(PACK"/specialescapes.c", e);
 		target_free(e);
 
-		target_PUSH(o, object("main",special_escapes,NULL));
+		target_PUSH(o, object("convert",special_escapes,NULL));
 	}
-	resource_exe = program("pack",o);
+	target_PUSH(o, object("main",file(PACK"/convert.h"),NULL));
+
+	target make = program("make",o);
+	if(make->updated) {
+		puts("updoot");
+		assert(getenv("retryderp")==NULL);
+		setenv("retryderp","1",1);
+		execvp(argv[0],argv);
+	}
 	target_array_clear(&o);
+
 
 	object_src = "src";
 		
@@ -438,7 +442,6 @@ int main(int argc, char *argv[])
 								"enabled AND ( ( NOT has_performed ) OR  (frequency / 1.5 < elapsed) )",
 								"ENABLED", "",
 								NULL));
-																					 ));
 		target searching_sql = resource
 			("searching_sql",
 			 template("sql/searching.sql",
@@ -471,8 +474,8 @@ int main(int argc, char *argv[])
 		target new_habit;
 		target checkup;
 	} glade = {
-		resource("new_habit_glade","new_habit.glade.xml"),
-		resource("checkup_glade","checkup.glade.xml")
+		resource("new_habit_glade",file("new_habit.glade.xml")),
+		resource("checkup_glade",file("checkup.glade.xml"))
 	};
 
 	target_PUSH(o, object("main",glade.checkup,NULL));
