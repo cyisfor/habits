@@ -15,7 +15,7 @@ const char* add_ext(const char* name, const char* ext) {
 	memcpy(buf,name,len);
 	buf[len] = '.';
 	memcpy(buf+len+1,ext,elen);
-	buf[elen] = '\0';
+	buf[len+1+elen] = '\0';
 	return buf;
 }
 

@@ -21,14 +21,15 @@ void va_list_to_$(ELEMENT_TYPE)_arrayv
 ($(ELEMENT_TYPE)_array* self, va_list args) {
 	size_t space = 0;
 	for(;;) {
-		$(ELEMENT_TYPE)_array_push(self);
 #ifdef BY_VALUE
 		$(ELEMENT_TYPE)* value = va_arg(args, $(ELEMENT_TYPE)*);
 		if(value == NULL) break;
+		$(ELEMENT_TYPE)_array_push(self);
 		memcpy(&self->items[self->length-1],value,sizeof($(ELEMENT_TYPE)));
 #else
 		$(ELEMENT_TYPE) value = va_arg(args,$(ELEMENT_TYPE));
 		if(value == NULL) break;
+		$(ELEMENT_TYPE)_array_push(self);
 		self->items[self->length-1] = value;
 #endif
 	}

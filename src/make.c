@@ -65,6 +65,7 @@ void build_program(const char* dest, target_array objects) {
 
 	const char** args = malloc(sizeof(char**)*nobj);
 	args[0] = getenv("CC");
+	if(args[0] == NULL) args[0] = "cc";
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
 		args[i+1] = cflags.items[i+1];
@@ -85,7 +86,7 @@ void build_program(const char* dest, target_array objects) {
 
 // MUST use a malloc'd path for every target_alloc...
 target target_alloc(char* path) {
-	target target = malloc(sizeof(target));
+	target target = malloc(sizeof(struct target));
 	target->path = path;
 	target->updated = (0 == stat(target->path,&target->info));
 }
@@ -129,10 +130,11 @@ target program(const char* name, target_array objects) {
 void build_object(const char* target, const char* source) {
 	if(spawn()) return;
 
-	int nobj = cflags.length+6;
+	int nobj = cflags.length+5;
 	const char** args = malloc(sizeof(char**)*nobj);
 
 	args[0] = getenv("CC");
+	if(args[0] == NULL) args[0] = "cc";
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
 		args[i+1] = cflags.items[i];
@@ -142,13 +144,13 @@ void build_object(const char* target, const char* source) {
 	args[++i] = target;
 	args[++i] = source;
 	assert(i == nobj - 1);
-	args[nobj-1] = NULL;
+	args[nobj] = NULL;
 
 	execvp(args[0],(char**)args);
 }
 
-const char* object_obj = "obj/";
-const char* object_src = "src/";
+const char* object_obj = "obj";
+const char* object_src = "src";
 
 target object1(const char* name) {
 	struct target source = {
@@ -164,7 +166,7 @@ target object1(const char* name) {
 
 target object(const char* name, ...) {
 	struct target source = {
-		.path = build_path(object_src,name)
+		.path = build_path(object_src,add_ext(name,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
@@ -278,32 +280,32 @@ int main(int argc, char *argv[])
 	mkdir(object_obj,0755);
 	mkdir("gen",0755);
 	
-	object_src = "gen/";
-	sa.source = template("gen/string_array.c",
+	object_src = "gen";
+	sa.source = template("string_array.c",
 											 "src/array.template.c",
 											 "ELEMENT_TYPE", "string",
 											 "HEADER", "#include \"target.h\"",
 											 NULL);
-	sa.header = template("gen/string_array.h",
-																 "src/array.template.h",
-																 "ELEMENT_TYPE", "string",
+	sa.header = template("string_array.h",
+											 "src/array.template.h",
+											 "ELEMENT_TYPE", "string",
 											 "HEADER", "typedef const char* string;",
-																 NULL);
+											 NULL);
 	target string_array = object("string_array",sa.header,NULL);
 
-	ta.source = template("gen/target_array.c",
-																 "src/array.template.c",
-																 "ELEMENT_TYPE", "target",
-																 NULL);
-	ta.header = template("gen/target_array.h",
-																 "src/array.template.h",
-																 "ELEMENT_TYPE", "target",
-																 "INCLUDES", "#include \"target.h\"",
-																 NULL);
+	ta.source = template("target_array.c",
+											 "src/array.template.c",
+											 "ELEMENT_TYPE", "target",
+											 NULL);
+	ta.header = template("target_array.h",
+											 "src/array.template.h",
+											 "ELEMENT_TYPE", "target",
+											 "INCLUDES", "#include \"target.h\"",
+											 NULL);
 
 	target target_array_herpderp = object("target_array",ta.header,NULL);
 
-	object_src = "src/";
+	object_src = "src";
 
 	target_array o;
 
@@ -317,23 +319,23 @@ int main(int argc, char *argv[])
 	target_array_clear(&o);
 
 
-#define PACK "./data_to_header/"
+#define PACK "./data_to_header"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
 	target e = program(PACK"/make_specialescapes", o);
 	target_array_clear(&o);
-	target special_escapes = generate(PACK"specialescapes.c", e);
+	target special_escapes = generate(PACK"/specialescapes.c", e);
 	target_free(e);
 
 	target_PUSH(o, object("main.c",special_escapes,NULL));
-	resource_exe = program("./data_to_header_string/pack",o);
+	resource_exe = program(PACK"/pack",o);
 	target_array_clear(&o);
 
 	target base_sql = resource("base_sql","sql/base.sql");
 	target pending_sql = resource("pending_sql","sql/pending.sql");
 	target searching_sql = resource("searching_sql","sql/searching.sql");
 
-	object_src = "src/";
+	object_src = "src";
 
 	target myassert = object("myassert",NULL);
 
