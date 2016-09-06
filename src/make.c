@@ -255,13 +255,22 @@ target object1(const char* name) {
 	return self;
 }
 
+
+void goodstat(const char* path, struct stat* buf) {
+	int res = stat(path,buf);
+	if(res != 0) {
+		error(res,0,"couldn't stat %s",path);
+	}
+}
+
+
 target object(const char* name, ...) {
 	struct target source = {
 		.path = build_path(object_src,add_ext(name,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 
-	assert(0==stat(source.path,&source.info));
+	goodstat(source.path,&source.info);
 	if(depends(self,&source)->updated) {
 		build_object(self->path, source.path);
 	} else {
@@ -351,7 +360,7 @@ target template(const char* dest, const char* source, ...) {
 	struct target starget = {
 		.path = source,
 	};
-	assert(0==stat(source,&starget.info));
+	goodstat(source,&starget.info);
 	if(depends(self,&starget)->updated) {
 		va_list args;
 		va_start(args, source);

@@ -1,5 +1,5 @@
-CFLAGS+=-g -fdiagnostics-color=always -Igen -Isrc
-LINK=gcc $(CFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
+CFLAGS+=-g -fdiagnostics-color=always -Igen -Isrc -I.
+LINK=gcc $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 all: | bin/make
 	@./bin/make
@@ -29,7 +29,7 @@ gen/target_array.h: src/array.template.h apply_template | gen
 	HEADER="#include \"target.h\"" ELEMENT_TYPE=target $(TEMPLATE)
 
 bin/apply_template: CFLAGS:=$(CFLAGS) -DDO_MAIN
-bin/apply_template: src/apply_template.c obj/myassert.o 
+bin/apply_template: obj/apply_template.o obj/myassert.o 
 	$(LINK)
 
 bin/make_specialescapes: data_to_header_string/make_specialescapes.c
@@ -38,18 +38,28 @@ bin/make_specialescapes: data_to_header_string/make_specialescapes.c
 bin/data_to_header_string: data_to_header_string/main.c obj/data_to_header_string/convert.o
 	$(LINK)
 
-obj/data_to_header_string/convert.o: gen/specialescapes.c data_to_header_string/convert.c | obj/data_to_header_string
-	gcc $(CFLAGS) -c -o $@ -I data_to_header_string/ data_to_header_string/convert.c
+obj/data_to_header_string/convert.o: gen/specialescapes.c data_to_header_string/d2h_convert.c | obj/data_to_header_string
+	gcc $(CFLAGS) -c -o $@ -I data_to_header_string/ data_to_header_string/d2h_convert.c
 
 gen/specialescapes.c: bin/make_specialescapes
 	./$< > $@.temp
 	mv $@.temp $@
 
+COMPILE=gcc $(CFLAGS) -c -o $@ $<
+
 obj/%.o: src/%.c
-	gcc $(CFLAGS) -c -o $@ $<
+	$(COMPILE)
 
 obj/%.o: gen/%.c
-	gcc $(CFLAGS) -c -o $@ $<
+	$(COMPILE)
+
+obj/myassert.o: CFLAGS:=$(CFLAGS) -Imyassert
+obj/myassert.o: myassert/module.c
+	$(COMPILE)
+
+obj/apply_template.o: CFLAGS:=$(CFLAGS)
+obj/apply_template.o: template/apply.c
+	$(COMPILE)
 
 obj/target_array.o: gen/target_array.c
 obj/string_array.o: gen/string_array.c
