@@ -115,7 +115,7 @@ target* program(const char* name, target_array objects) {
 	target* target = target_alloc(build_path("bin",name));
 	int i;
 	for(i=0;i<objects.length;++i) {
-		if(depends(target,objects.items[i])) {
+		if(depends(target,&objects.items[i])) {
 			build_program(target->path, objects);
 		}
 	}
@@ -140,33 +140,34 @@ void build_object(const char* target, const char* source) {
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
 
-	execvp(args[0],args,NULL);
+	execvp(args[0],(char**)args);
 }
 
 const char* object_obj = "obj/";
 const char* object_src = "src/";
 
 struct target* object(const char* name, ...) {
-	target* target = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	target source = {
-		.path: build_path(object_src,name)
-	}
-	if(depends(target,&source)) {
-		build_object(target->path, source.path);
+		.path = build_path(object_src,name)
+	};
+	target* self = target_alloc(build_path(object_obj,add_ext(name,"o")));
+	
+	if(depends(self,&source)) {
+		build_object(self->path, source.path);
 	} else {
 		va_list args;
 		va_start(args, name);
 		for(;;) {
 			target* header = va_arg(args,target*);
 			if(header == NULL) break;
-			if(depends(target,header)) {
-				build_object(target->path, source.path);
+			if(depends(self,header)) {
+				build_object(self->path, source.path);
 				break;
 			}
 		}
 	}
 	free(source.path); // ehhh
-	return target;
+	return self;
 }
 
 /* update: no ownership, no freeing anything, way too messy
@@ -203,33 +204,33 @@ void generate_resource(const char* name,
 }
 
 struct target* resource(const char* name, const char* source) {
-	target* target = target_alloc(build_path("gen",add_ext(name,"h")));
+	target* self = target_alloc(build_path("gen",add_ext(name,"h")));
 	target starget = {
-		.path: source
+		.path = source
 	};
 	assert(0==stat(source,&starget.info));
-	if(depends(target,resource_exe) || depends(target,&starget)) {
-		generate_resource(name, target->path, source);
+	if(depends(self,resource_exe) || depends(self,&starget)) {
+		generate_resource(name, self->path, source);
 	}
-	return target;
+	return self;
 }
 
 struct target* generate(const char* dest, target* program) {
-	target* target = target_alloc(dest);
-	if(depends(target,program)) {
+	target* self = target_alloc(dest);
+	if(depends(self,program)) {
 		do_generate(program->path, dest, NULL);
 	}
-	return target;
+	return self;
 }
 
 struct target* template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
-	target* target = target_alloc(build_path("gen",dest));
+	target* self = target_alloc(build_path("gen",dest));
 	target starget = {
-		.path: source,
+		.path = source,
 	};
 	assert(0==stat(source,&starget.info));
-	if(depends(target,&starget)) {
+	if(depends(self,&starget)) {
 		va_list args;
 		va_start(source, args);
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
@@ -237,7 +238,7 @@ struct target* template(const char* dest, const char* source, ...) {
 		va_end(args);
 		rename(temp,dest);
 	}
-	return target;
+	return self;
 }
 
 int main(int argc, char *argv[])
