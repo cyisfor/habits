@@ -18,6 +18,43 @@
 string_array cflags;
 string_array ldflags;
 
+#define PKGCONFIG_LINE 0x1000
+
+struct pkgconfig {
+	// just to hold for cflags usage
+	char cflags[PKGCONFIG_LINE];
+	char libs[PKGCONFIG_LINE];
+} pkgconfig;
+
+void pkg_config(const char* names) {
+	void doit(bool use_cflags) {
+		int io[2];
+		pipe(io);
+		int pid = fork();
+		assert(pid >= 0);
+		if(pid == 0) {
+			dup2(io[1],0);
+			close(io[1]);
+			execlp("pkg-config",cflags ? "--cflags" : "--libs",names,NULL);
+		}
+		close(io[1]);
+		char* buf = use_cflags ? pkgconfig.cflags : pkgconfig.libs;
+		ssize_t amt = read(io[0],buf,0x100);
+		for(;;) {
+			char* token = strtok(buf," ");
+			if(token == NULL) break;
+			if(use_cflags)
+				string_PUSH(cflags,token);
+			else
+				string_PUSH(ldflags,token);
+		}
+		// now buf is chopped up, and cflags isn't pointing to stack data
+		// but static data instead, that won't disappear.
+	}
+	doit(true);
+	doit(false);
+}
+
 void string_free(const char* s) {}
 
 void init_flags(void) {
@@ -113,7 +150,6 @@ void target_free(target target) {
 
 bool left_is_older(struct stat left, struct stat right) {
 	if(left.st_mtime < right.st_mtime) return true;
-	printf("maybe same second? %d %d\n",left.st_mtime,right.st_mtime);
 	if(left.st_mtime == right.st_mtime)
 		if(left.st_mtim.tv_nsec < right.st_mtim.tv_nsec) return true;
 	return false;
@@ -262,7 +298,7 @@ target resource(const char* name, const char* source) {
 
 target generate(const char* dest, target program) {
 	target self = target_alloc(strdup(dest));
-	if(depends(self,program)) {
+	if(depends(self,program)->updated) {
 		do_generate(program->path, dest, NULL);
 	}
 	return self;
@@ -275,7 +311,7 @@ target template(const char* dest, const char* source, ...) {
 		.path = source,
 	};
 	assert(0==stat(source,&starget.info));
-	if(depends(self,&starget)) {
+	if(depends(self,&starget)->updated) {
 		va_list args;
 		va_start(args, source);
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
@@ -355,8 +391,8 @@ int main(int argc, char *argv[])
 	target special_escapes = generate(PACK"/specialescapes.c", e);
 	target_free(e);
 
-	target_PUSH(o, object("main.c",special_escapes,NULL));
-	resource_exe = program(PACK"/pack",o);
+	target_PUSH(o, object("main",special_escapes,NULL));
+	resource_exe = program("pack",o);
 	target_array_clear(&o);
 
 	target base_sql = resource("base_sql","sql/base.sql");
@@ -370,7 +406,16 @@ int main(int argc, char *argv[])
 	target_PUSH(o, object("readable_interval",NULL));
 	target_PUSH(o, path);
 
-	string_PUSH(cflags, "-Isrc");
+	struct {
+		ssize_t cflags;
+		ssize_t ldflags;
+	} savepos = {
+		cflags.length,
+		ldflags.length;
+	};
+	pkg_config("gtk+-3.0");
+	pkg_config("libnotify");
+	
 	object_obj = build_path("obj","checkup");
 	mkdir(object_obj,0755);
 	object_src = "src/checkup";
