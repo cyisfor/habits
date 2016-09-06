@@ -27,5 +27,5 @@ void $(ELEMENT_TYPE)_array_clear($(ELEMENT_TYPE)_array* self);
 
 #define $(ELEMENT_TYPE)_PUSH(array,thing) { \
 		$(ELEMENT_TYPE)_array_push(&array); \
-		array.items[array.length] = thing; \
+		array.items[array.length-1] = thing; \
 	}

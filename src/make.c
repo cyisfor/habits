@@ -267,6 +267,7 @@ target template(const char* dest, const char* source, ...) {
 int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
+	init_flags();
 	struct SH {
 		target source;
 		target header;
@@ -279,12 +280,14 @@ int main(int argc, char *argv[])
 	
 	object_src = "gen/";
 	sa.source = template("gen/string_array.c",
-																 "src/array.template.c",
-																 "ELEMENT_TYPE", "const char*",
-																 NULL);
+											 "src/array.template.c",
+											 "ELEMENT_TYPE", "string",
+											 "HEADER", "#include \"target.h\"",
+											 NULL);
 	sa.header = template("gen/string_array.h",
 																 "src/array.template.h",
-																 "ELEMENT_TYPE", "const char*",
+																 "ELEMENT_TYPE", "string",
+											 "HEADER", "typedef const char* string;",
 																 NULL);
 	target string_array = object("string_array",sa.header,NULL);
 

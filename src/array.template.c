@@ -3,12 +3,12 @@
 // va_list can't be rewinded (because C is retarded)
 
 void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* self) {
-	++self->length; // we set this item previously
 	if(self->length == self->space) {
 		self->space += 0x100;
 		self->items = realloc(self->items,
 														sizeof(*self->items)*self->space);
 	}
+	++self->length; // we shall set this item
 }
 
 void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* self) {
@@ -25,11 +25,11 @@ void va_list_to_$(ELEMENT_TYPE)_arrayv
 #ifdef BY_VALUE
 		$(ELEMENT_TYPE)* value = va_arg(args, $(ELEMENT_TYPE)*);
 		if(value == NULL) break;
-		memcpy(&self->items[self->length],value,sizeof($(ELEMENT_TYPE)));
+		memcpy(&self->items[self->length-1],value,sizeof($(ELEMENT_TYPE)));
 #else
 		$(ELEMENT_TYPE) value = va_arg(args,$(ELEMENT_TYPE));
 		if(value == NULL) break;
-		self->items[self->length] = value;
+		self->items[self->length-1] = value;
 #endif
 	}
 	$(ELEMENT_TYPE)_array_done_pushing(self);
