@@ -240,10 +240,12 @@ void build_object(const char* target, const char* source) {
 
 const char* object_obj = "obj";
 const char* object_src = "src";
-
+const char* object_name = NULL;
 target object1(const char* name) {
+	const char* dername = name;
+	if(object_name) dername = object_name;
 	struct target source = {
-		.path = build_path(object_src,add_ext(name,"c"))
+		.path = build_path(object_src,add_ext(dername,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
@@ -265,8 +267,10 @@ void goodstat(const char* path, struct stat* buf) {
 
 
 target object(const char* name, ...) {
+	const char* dername = name;
+	if(object_name) dername = object_name;
 	struct target source = {
-		.path = build_path(object_src,add_ext(name,"c"))
+		.path = build_path(object_src,add_ext(dername,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 
@@ -421,10 +425,12 @@ int main(int argc, char *argv[])
 	target target_array_herpderp = object("target_array",ta.header,NULL);
 	target_array_herpderp->permanent = true;
 	
-	object_src = "src";
-
+	object_src = "myassert";
+	object_name = "module"; // ehhhh
 	target myassert = object("myassert",NULL);
 	myassert->permanent = true;
+	object_src = "src";
+	object_name = NULL;
 	target path = object("path",NULL);
 	path->permanent = true;
 
@@ -432,7 +438,11 @@ int main(int argc, char *argv[])
 
 	string_PUSH(cflags,"-Idata_to_header_string");
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
+	object_src = "template";
+	object_name = "apply";
 	target_PUSH(o, object1("apply_template"));
+	object_src = "src";
+	object_name = NULL;
 	target_PUSH(o, string_array);
 	target_PUSH(o, target_array_herpderp);
 	target_PUSH(o, myassert);
@@ -448,7 +458,9 @@ int main(int argc, char *argv[])
 		target special_escapes = generate(PACK"/specialescapes.c", e);
 		target_free(e);
 
+		object_name = "d2h_convert";
 		target_PUSH(o, object("convert",special_escapes,NULL));
+		object_name = NULL;
 	}
 	object_src = "src/";
 	//target_PUSH(o, object("main",file(PACK"/convert.h"),NULL));

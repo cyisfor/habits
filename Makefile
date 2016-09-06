@@ -7,7 +7,7 @@ all: | bin/make
 bin/make: obj/make.o obj/string_array.o obj/target_array.o obj/myassert.o obj/path.o obj/apply_template.o obj/data_to_header_string/convert.o | bin obj
 	$(LINK)
 
-obj/make.o: src/make.c gen/string_array.h gen/target_array.h
+obj/make.o: src/make.c gen/string_array.h gen/target_array.h | obj
 
 obj/make.o: CFLAGS:=$(CFLAGS) -Idata_to_header_string
 
