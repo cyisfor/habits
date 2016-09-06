@@ -44,20 +44,28 @@ void pkg_config(const char* names) {
 		}
 		close(io[1]);
 		char* buf = use_cflags ? pkgconfig.cflags : pkgconfig.libs;
-		ssize_t amt = read(io[0],buf,0x100);
-		assert(amt > 0);
+		size_t total = 0;
+		for(;;) {
+			ssize_t amt = read(io[0],buf+total,PKGCONFIG_LINE-total);
+			if(amt == 0) break;
+			assert(amt > 0);
+			total += amt;
+			assert(total < PKGCONFIG_LINE);
+		}
+			
 		int status = 0;
 		assert(pid == waitpid(pid, &status, 0));
 		assert(WIFEXITED(status) && 0 == WEXITSTATUS(status));
-		char* token = strtok(token," ");
-		for(;;) {
-			if(use_cflags) {
-				string_PUSH(cflags,token);
-			} else {
-				string_PUSH(ldflags,token);
+		char* token = strtok(buf," \n");
+		while(token != NULL) {
+			if(*token) {
+				if(use_cflags) {
+					string_PUSH(cflags,token);
+				} else {
+					string_PUSH(ldflags,token);
+				}
 			}
-			token = strtok(NULL," ");
-			if(token == NULL) break;
+			token = strtok(NULL," \n");
 		}
 		// now buf is chopped up, and cflags isn't pointing to stack data
 		// but static data instead, that won't disappear.
@@ -129,11 +137,11 @@ void build_program(const char* dest, target_array objects) {
 	args[0] = getenv("CC");
 	if(args[0] == NULL) args[0] = "cc";
 	int i=0, j = 0;
+	args[++i] = "-o";
+	args[++i] = strdup(dest);
 	for(j=0;j<cflags.length;++j) {
 		args[++i] = strdup(cflags.items[j]);
 	}
-	args[++i] = "-o";
-	args[++i] = strdup(dest);
 	for(j=0;j<objects.length;++j) {
 		args[++i] = strdup(objects.items[j]->path);
 	}
@@ -387,6 +395,7 @@ int main(int argc, char *argv[])
 
 	target make = program("make",o);
 	if(make->updated) {
+		puts("updoot");
 		assert(getenv("retryderp")==NULL);
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);

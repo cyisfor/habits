@@ -1,6 +1,7 @@
 #include "new_habit.h"
 #include "db.h"
 #include "readable_interval.h"
+#include "define_this.h"
 
 #include "new_habit.glade.h"
 
@@ -117,6 +118,7 @@ static gboolean update_text_freq(void* udata) {
 }
 
 static void on_text_freq(GtkEditable* thing, gpointer udata) {
+	DEFINE_THIS(struct new_habit_info);
 	if(this->typing) {
 		g_source_remove(this->typing);
 	}
@@ -152,7 +154,7 @@ struct new_habit_info* new_habit_init(void) {
 
 void new_habit_show(struct new_habit_info* this) {
 	gtk_entry_set_text(GTK_ENTRY(this->frequency),"86400");
-	update_readable_frequency();
+	update_readable_frequency(this);
 	gtk_entry_set_text(GTK_ENTRY(this->description),"");
 	gtk_adjustment_set_value(this->importancederp, 0.5);
 	gtk_adjustment_set_value(this->freqadjderp, starting_point);
