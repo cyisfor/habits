@@ -6,7 +6,7 @@
 typedef struct {
 	const char* path;
 	struct stat info;
-	bool updated;
+	bool updating;
 } target;
 
 #define ELEMENT_TYPE target
@@ -97,32 +97,43 @@ void target_array_clear(target_array args) {
 
 target* target_alloc(char* path) {
 	target->path = path;
-	target->updated = (0 == stat(target->path,&target->info));
+	target->updating = (0 == stat(target->path,&target->info));
 }
 
-/* only return a target when it has been COMPLETELY built and updated */
+void target_free(target* target) {
+	free(target);
+}
+
+bool depends(target* dest, target* source) {
+	if(dest->updating) {
+		return true;
+	}
+	if(left_is_older(dest->info, source->info)) {
+		dest->updating = true;
+		return true;
+	}
+	return false;
+}
+
+/* only return a target when it has been COMPLETELY built and updating */
 target* program(const char* name, ...) {
 	target* target = target_alloc(build_path("bin",name));
 	target* main_source = target_alloc(build_path(src,add_ext(name,"c")));
-	target_array args;
-	va_list_to_targets(&args);
-	if(target->updated) {
-		build_program(target->path, main_source->path, args);
-	} else if(left_is_older(target->info, main_source->info)) {
+	if(depends(target,main_source)) {
 		build_program(target->path, args);
-		target->updated = true;
-	} else {
+	} else {		
+		target_array args;
+		va_list_to_targets(&args);
 		int i;
 		for(i=0;i<args->length;++i) {
 			target* dep = args.items[i];
 			if(left_is_older(target->info, dep->info)) {
 				build_program(target->path, args);
-				target->updated = true;
+				target->updating = true;
 				break;
 			}
 		}
 	}
-	target_array_clear(args);
 	return target;
 }
 
@@ -152,46 +163,28 @@ const char* object_src = "src/";
 
 struct target* object(const char* name, ...) {
 	target* target = target_alloc(build_path(object_obj,add_ext(name,"o")));
-	const char* source = build_path(object_src,name);
-	if(!target->updated) {
-		struct stat source_info;
-		// manually generate main source before building the object if necessary
-		assert(0==stat(source,&source_info));
-
-		if(!left_is_older(target->info,source_info))
-			return target;
-	}
-	build_object(target->path, source);
-	target->updated = true;
-	return target;
-}
-
-	va_list headers;
-	va_start(headers, name);
-	for(;;) {
-		target* header = va_arg(headers,target*);
-		if(left_is_older(target->info,header->info)) {
-			build_object(target->path, source->path);
-			target->updated = true;
-			for(;;) {
-				target_free(header);
-				target* header = va_arg(headers,target*);
-				if(header == NULL) break;
+	target* source = target_alloc(build_path(object_src,name));
+	if(depends(target,source)) {
+		build_object(target->path, source);
+	} else {
+		va_list headers;
+		va_start(headers, name);
+		for(;;) {
+			target* header = va_arg(headers,target*);
+			if(left_is_older(target->info,header->info)) {
+				build_object(target->path, source->path);
+				target->updating = true;
+				break;
 			}
-			break;
 		}
-		target_free(header);
 	}
 
-	assert(target->updated == false);
+	assert(target->updating == false);
 	return target;
 }
 
-/* HAX:
-	 all targets passed are owned and must be freed,
-	 but you can reuse one of the targets as the return value,
-	 passing ownership back to the parent function.
-*/
+/* update: no ownership, no freeing anything, way too messy
+	 use mark/rewind allocation if needed. */
 
 void do_generate(const char* exe, const char* target, const char* source) {
 	assert(target != NULL); // but source can be NULL
@@ -223,61 +216,61 @@ void generate_resource(const char* name,
 
 struct target* resource(const char* name, target* source) {
 	target* target = target_alloc(build_path("gen",add_ext(name,"h")));
-	if(target->updated) {
+	if(depends(target,source)) {
 		generate_resource(name, target->path, source->path);
-	} else if(left_is_older(target->info, source->info)) {
-		generate_resource(name, target->path, source->path);
-		target->updated = true;
 	}
 	return target;
 }
 
 struct target* generate(const char* dest, target* program) {
-	struct stat proginfo;
-	memcpy(&proginfo,&program->info,sizeof(proginfo));
-	// reusing program here instead of pointless malloc/free
-	target* target = program;
-	target->path = dest;
-	target->updated = (0 != stat(dest,&target->info));
-	if(target->updated) {
+	target* target = target_alloc(dest);
+	if(depends(target,program)) {
 		do_generate(program->path, dest, NULL);
-	} else if(left_is_older(target->info,proginfo)) {
-		do_generate(program->path, dest, NULL);
-		target->updated = true;
 	}
 	return target;
 }
 
-const char* template_exe = NULL;
-struct target* template(const char* dest,
+target* template_exe = NULL;
+struct target* template_general(const char* dest, const char* source, ...) {
+	char* temp = temp_for(dest);
+	target* target = target_alloc(dest);
+	target source = {
+		.path: source,
+	};
+	assert(0==stat(source.path,&source.info));	
+	if(depends(target,template_exe) || depends(target,source)) {
+		va_list args;
+		va_start(source, args);
+		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
+									 open(source,O_RDONLY),args);
+		va_end(args);
+		rename(temp,dest);
+		return target;
+	}
+
+
+struct target* template_sql(const char* dest,
 												const char* source,
 												const char* enabled,
 												const char* criteria) {
 	char* temp = temp_for(dest);
 	target* target = target_alloc(dest);
-	target* build() {
-		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
-									 open(source,O_RDONLY),
-									 "ENABLED",enabled,
-									 "CRITERIA", criteria);
-		rename(temp,dest);
-		return target;
-	}
-	if(target->updated) {
-		return build();
-	} else {
-		struct stat source_info;
-		assert(0==stat(source,&source_info));
-		if(left_is_older(target->info,source_info)) {
-			return build();
-		}
-	}
+	target* source = target_alloc(source);
 }
+
+struct target* template_array(const char* dest,
+															const char* source,
+															const char* type) {
+
+	if(depends(target,template_exe) || depends(target,source)) {
+		apply_template(open(temp(
 
 int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
-	if(program("make",object("apply_template")).updated) {
+	if(program("make",
+						 object("apply_template", template("),
+						 ).updating) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
