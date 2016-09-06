@@ -56,6 +56,18 @@ bool spawn(void) {
 	return false;
 }
 
+void show(const char**args) {
+	fputs("run: ",stdout);
+	bool first = true;
+	while(*args) {
+		if(first) first = false;
+		else putchar(' ');
+		fputs(*args,stdout);
+		++args;
+	}
+	putchar('\n');
+}
+
 void build_program(const char* dest, target_array objects) {
 	if(spawn()) return;
 
@@ -82,15 +94,16 @@ void build_program(const char* dest, target_array objects) {
 	}
 	assert(i == nobj - 1);
 	args[nobj] = NULL;
-
+	show(args);
 	execvp(args[0],(char**)args);
 }
 
 // MUST use a malloc'd path for every target_alloc...
 target target_alloc(char* path) {
-	target target = malloc(sizeof(struct target));
-	target->path = path;
-	target->updated = (0 == stat(target->path,&target->info));
+	target self = malloc(sizeof(struct target));
+	self->path = path;
+	self->updated = (0 != stat(self->path,&self->info));
+	return self;
 }
 
 void target_free(target target) {
@@ -110,9 +123,10 @@ target depends(target dest, target source) {
 	if(!dest->updated) {
 		if(left_is_older(dest->info, source->info)) {
 			// dest->build()
+			printf("oldered %s %s\n",dest->path,source->path);
 			dest->updated = true;
 		}
-	}
+	} 
 	return dest;
 }
 
@@ -147,7 +161,7 @@ void build_object(const char* target, const char* source) {
 	args[++i] = source;
 	assert(i == nobj - 1);
 	args[nobj] = NULL;
-
+	show(args);
 	execvp(args[0],(char**)args);
 }
 
@@ -156,7 +170,7 @@ const char* object_src = "src";
 
 target object1(const char* name) {
 	struct target source = {
-		.path = build_path(object_src,name)
+		.path = build_path(object_src,add_ext(name,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
@@ -171,7 +185,8 @@ target object(const char* name, ...) {
 		.path = build_path(object_src,add_ext(name,"c"))
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
-	
+
+	assert(0==stat(source.path,&source.info));
 	if(depends(self,&source)) {
 		build_object(self->path, source.path);
 	} else {
@@ -210,6 +225,7 @@ void do_generate(const char* exe, const char* target, const char* source) {
 		assert(fd >= 0);
 		dup2(fd, 1);
 		close(fd);
+		printf("generate %s from %s via %s\n",target,source,exe);
 		execlp(exe,exe,source,NULL);
 	}
 	if(waitforok(pid)) {
@@ -270,7 +286,6 @@ target template(const char* dest, const char* source, ...) {
 
 int main(int argc, char *argv[])
 {
-	assert(getenv("retryderp")==NULL);
 	init_flags();
 	struct SH {
 		target source;
@@ -315,19 +330,22 @@ int main(int argc, char *argv[])
 	target_array o = {};
 
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
+	target_PUSH(o, object1("apply_template"));
 	target_PUSH(o, string_array);
 	target_PUSH(o, target_array_herpderp);
 	target_PUSH(o, myassert);
 	target_PUSH(o, path);
-	
-	if(program("make",o)->updated) {
+
+	target make = program("make",o);
+	if(make->updated) {
+		assert(getenv("retryderp")==NULL);
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
 	target_array_clear(&o);
 
 
-#define PACK "./data_to_header"
+#define PACK "./data_to_header_string"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
 	target e = program(PACK"/make_specialescapes", o);
