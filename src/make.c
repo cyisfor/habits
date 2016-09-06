@@ -6,7 +6,7 @@
 typedef struct {
 	const char* path;
 	struct stat info;
-	bool updating;
+	bool updated;
 } target;
 
 #define ELEMENT_TYPE target
@@ -97,7 +97,7 @@ void target_array_clear(target_array args) {
 
 target* target_alloc(char* path) {
 	target->path = path;
-	target->updating = (0 == stat(target->path,&target->info));
+	target->updated = (0 == stat(target->path,&target->info));
 }
 
 void target_free(target* target) {
@@ -105,35 +105,23 @@ void target_free(target* target) {
 }
 
 bool depends(target* dest, target* source) {
-	if(dest->updating) {
+	if(dest->updated) {
 		return true;
 	}
 	if(left_is_older(dest->info, source->info)) {
-		dest->updating = true;
+		dest->updated = true;
 		return true;
 	}
 	return false;
 }
 
-/* only return a target when it has been COMPLETELY built and updating */
-target* program(const char* name, ...) {
+/* only return a target when it has been COMPLETELY built and updated */
+target* program(const char* name) {
 	target* target = target_alloc(build_path("bin",name));
 	target* main_source = target_alloc(build_path(src,add_ext(name,"c")));
 	if(depends(target,main_source)) {
 		build_program(target->path, args);
-	} else {		
-		target_array args;
-		va_list_to_targets(&args);
-		int i;
-		for(i=0;i<args->length;++i) {
-			target* dep = args.items[i];
-			if(left_is_older(target->info, dep->info)) {
-				build_program(target->path, args);
-				target->updating = true;
-				break;
-			}
-		}
-	}
+	} 
 	return target;
 }
 
@@ -161,7 +149,7 @@ void build_object(const char* target, const char* source) {
 const char* object_obj = "obj/";
 const char* object_src = "src/";
 
-struct target* object(const char* name, ...) {
+struct target* object(const char* name) {
 	target* target = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	target* source = target_alloc(build_path(object_src,name));
 	if(depends(target,source)) {
@@ -173,13 +161,13 @@ struct target* object(const char* name, ...) {
 			target* header = va_arg(headers,target*);
 			if(left_is_older(target->info,header->info)) {
 				build_object(target->path, source->path);
-				target->updating = true;
+				target->updated = true;
 				break;
 			}
 		}
 	}
 
-	assert(target->updating == false);
+	assert(target->updated == false);
 	return target;
 }
 
@@ -231,13 +219,13 @@ struct target* generate(const char* dest, target* program) {
 }
 
 target* template_exe = NULL;
-struct target* template_general(const char* dest, const char* source, ...) {
+struct target* template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
 	target* target = target_alloc(dest);
 	target source = {
 		.path: source,
 	};
-	assert(0==stat(source.path,&source.info));	
+	assert(0==stat(source.path,&source.info));
 	if(depends(target,template_exe) || depends(target,source)) {
 		va_list args;
 		va_start(source, args);
@@ -249,31 +237,31 @@ struct target* template_general(const char* dest, const char* source, ...) {
 	}
 
 
-struct target* template_sql(const char* dest,
-												const char* source,
-												const char* enabled,
-												const char* criteria) {
-	char* temp = temp_for(dest);
-	target* target = target_alloc(dest);
-	target* source = target_alloc(source);
-}
-
-struct target* template_array(const char* dest,
-															const char* source,
-															const char* type) {
-
-	if(depends(target,template_exe) || depends(target,source)) {
-		apply_template(open(temp(
-
 int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
+	struct {
+		target* source;
+		target* header;
+	} string_array ;
+	string_array.source = template("gen/string_array.c",
+																 "src/array.template.c",
+																 "ELEMENT_TYPE", "const char*",
+																 NULL);
+	string_array.header = template("gen/string_array.h",
+																 "src/array.template.h",
+																 "ELEMENT_TYPE", "const char*",
+																 NULL);
 	if(program("make",
-						 object("apply_template", template("),
-						 ).updating) {
+						 object("apply_template", string_array.header),
+						 object("string_array",string_array.source)).updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
+
+	program("checkup",
+					object(
+
 		template("sql/pending.sql",
 					 "sql/querying.template.sql",
 					 "",
@@ -299,7 +287,7 @@ int main(int argc, char *argv[])
 	object_obj = "obj/";
 	object_flags = "";
 
-	object("db"); 
+	object("db");
 	object("readable_interval");
 
 	return 0;
