@@ -36,14 +36,24 @@ void resolve(target* target) {
 
 #define ELEMENT_TYPE target
 #include "array.c"
-#define ELEMENT_TYPE const char
+#undef ELEMENT_TYPE
+
+typedef const char* string;
+#define ELEMENT_TYPE string
 #include "array.c"
+#undef ELEMENT_TYPE
+
+string_array cflags;
+string_array ldflags;
+
+void basicflags(void) {
+	string_array_push(cflags,
 
 void build_program(const char* dest, array objects) {
 	int nobj =
 		objects->length
-		+ cflags->length
-		+ ldflags->length
+		+ cflags.length
+		+ ldflags.length
 		+ 5; // don't forget +1 for the trailing NULL
 
 	const char** args = malloc(sizeof(char**)*nobj);

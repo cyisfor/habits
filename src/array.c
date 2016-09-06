@@ -8,33 +8,45 @@ typedef struct {
 	size_t length;
 } ELEMENT_TYPE ## _array;
 
-void va_list_to_ ## ELEMENT_TYPE ## arrayv
+static void ELEMENT_TYPE ## _array_push(ELEMENT_TYPE ## _array* result) {
+	++result->length; // we set this item previously
+	if(result->length == result->space) {
+		result->space += 0x100;
+		result->items = realloc(result->items,
+														sizeof(*result->items)*result->space);
+	}
+}
+
+static void ELEMENT_TYPE ## _array_done_pushing(ELEMENT_TYPE ## _array* result) {
+	result->space = result->length;
+	result->items = realloc(result->items,
+													sizeof(*result->items)*result->space);
+}
+
+
+static void va_list_to_ ## ELEMENT_TYPE ## _arrayv
 (ELEMENT_TYPE ## _array* result, va_list args) {
 	size_t space = 0;
 	for(;;) {
-		if(result->length == space) {
-			space += 0x100;
-			result->items = realloc(result->items,sizeof(*result->items)*0x100);
-		}
+		ELEMENT_TYPE ## _array_push(result);
 #ifdef BY_VALUE
 		ELEMENT_TYPE* value = va_arg(args, ELEMENT_TYPE*);
 		if(value == NULL) break;
-		memcpy(&result->items[result->length++],value,sizeof(ELEMENT_TYPE));
+		memcpy(&result->items[result->length],value,sizeof(ELEMENT_TYPE));
 #else
 		ELEMENT_TYPE value = va_arg(args,ELEMENT_TYPE);
 		if(value == NULL) break;
-		result->items[result->length++] = value;
+		result->items[result->length] = value;
 #endif
 	}
-	result->items = realloc(result->items,
-													sizeof(*result->items)*result->length);
+	ELEMENT_TYPE ## _array_done_pushing(result);
 }
 
 // this function will ONLY work if your function has exactly 1
 // non-variadic parameter.
-void va_list_to_array(target_array* result, ...) {
+static void va_list_to_ ## ELEMENT_TYPE ## s(ELEMENT_TYPE ## _array* result, ...) {
 	va_list args;
 	va_start(args,result);
-	va_list_to_arrayv(result,args);
+	va_list_to_ ## ELEMENT_TYPE ## _arrayv(result,args);
 	va_end(args);
 }
