@@ -6,6 +6,7 @@
 typedef struct {
 	ELEMENT_TYPE* items;
 	size_t length;
+	size_t space;
 } ELEMENT_TYPE ## _array;
 
 static void ELEMENT_TYPE ## _array_push(ELEMENT_TYPE ## _array* result) {

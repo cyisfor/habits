@@ -1,38 +1,8 @@
 struct target {
 	const char* path;
 	struct stat info;
-	bool statted;
 	bool updated;
-	void (*build)(target*);
-	struct target* dependencies;
 } target;
-
-void resolve(target* target) {
-	bool rebuild = false;
-	if(target->statted == false) {
-		target->exists = (0 == stat(target->path,&target->info));
-		if(!target->exists) {
-			rebuild = true;
-		}
-	}
-	if(!rebuild) {
-		// assume depenencies are already resolved
-		target* d = target->dependencies;
-		while(d) {
-			if(target->info.st_mtime < d->info.st_mtime ||
-				 (target->info.st_mtime == d->info.st_mtime &&
-					target->info.st_mtim.tv_nsec < d->info.st_mtim.tv_nsec)) {
-				rebuild = true;
-				break;
-			}
-		}
-	}
-	if(!rebuild) return;
-	target->build(target);
-	target->exists = (0 == stat(target->path,&target->info));
-	assert(target->exists);
-	target->updated = true;
-}
 
 #define ELEMENT_TYPE target
 #include "array.c"
@@ -46,23 +16,55 @@ typedef const char* string;
 string_array cflags;
 string_array ldflags;
 
-void basicflags(void) {
-	string_array_push(cflags,
+void init_flags(void) {
+	cflags.length = 3;
+	cflags.items = NULL;
+	string_array_done_pushing(&cflags);
+	cflags.items[0] = "-g";
+	cflags.items[1] = "-O2";
+	cflags.items[2] = "-fdiagnostics-color=always";
 
-void build_program(const char* dest, array objects) {
+	ldflags.length = 0;
+	ldflags.items = NULL;
+}
+
+bool waitforok(int pid) {
+	assert(pid > 0);
+	int status = 0;
+	assert(pid == waitpid(pid,&status,0));
+	if(!WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
+		return false;
+	}
+	return true;
+}
+
+bool spawn(void) {
+	int pid = fork();
+	assert(pid >= 0);
+	if(pid != 0) {
+		if(!waitforok(pid)) {
+			error(23,0,"program failed");
+		}
+		return true;
+	}
+	return false;
+}
+
+void build_program(const char* dest, target_array objects) {
+	if(spawn()) return;
+
 	int nobj =
 		objects->length
 		+ cflags.length
 		+ ldflags.length
-		+ 5; // don't forget +1 for the trailing NULL
+		+ 4; // don't forget +1 for the trailing NULL
 
 	const char** args = malloc(sizeof(char**)*nobj);
 	args[0] = getenv("CC");
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
-		args[++i] = cflags.items[i].value;
+		args[i+1] = cflags.items[i+1].value;
 	}
-	args[++i] = "-c";
 	args[++i] = "-o";
 	args[++i] = program->path;
 	for(i=0;i<objects.length;++i) {
@@ -73,15 +75,8 @@ void build_program(const char* dest, array objects) {
 	}
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
-	int pid = fork();
-	if(pid == 0)
-		execvp(args[0],args);
-	assert(pid > 0);
-	int status = 0;
-	assert(pid == waitpid(pid,&status,0));
-	if(!WIFEXITED(status) || 0 != WEXITSTATUS(status)) {
-		error(1,0,"program failed");
-	}
+
+	execvp(args[0],args);
 }
 
 /* only return a target when it has been COMPLETELY built and updated */
@@ -89,17 +84,17 @@ target* program(const char* name, ...) {
 	target* target = malloc(sizeof(target));
 	target->path = build_assured_path("bin",name);
 	target->updated = (0 != stat(path,&target->info));
-	array args;
-	va_list_to_array(&args);
+	target_array args;
+	va_list_to_targets(&args);
 	if(target->updated) {
-		build_program(name, args);
+		build_program(target->path, args);
 		return target;
 	}
 	int i;
 	for(i=0;i<args->length;++i) {
 		target* dep = args.items[i];
 		if(left_is_older(target->info, dep->info)) {
-			build_program(name, args);
+			build_program(target->path, args);
 			target->updated = true;
 			return target;
 		}
@@ -107,15 +102,98 @@ target* program(const char* name, ...) {
 	return target;
 }
 
-struct target* object(const char* name, ...) {
+void build_object(const char* target, const char* source) {
+	int nobj = cflags.length
+		+5;
+
+	const char** args = malloc(sizeof(char**)*nobj);
+	args[0] = getenv("CC");
+	int i = 0;
+	for(i=0;i<cflags.length;++i) {
+		args[i+1] = cflags.items[i].value;
+	}
+	args[++i] = "-c";
+	args[++i] = "-o";
+	args[++i] = target;
+	args[++i] = source;
+	assert(i == nobj - 1);
+	args[nobj-1] = NULL;
+
+		
 	
-	va_start(name,args);
-	target* self = malloc(sizeof(target));
-	self->path = build_path("obj",name);
-	self->statted = false;
-	self->build = build_object;
-	self.dependencies = source(name); // we always depend on a source of our name
-	for(;;)
+		
+}
+
+const char* object_obj = "obj/";
+const char* object_src = "src/";
+
+struct target* object(const char* name, ...) {
+	target* target = malloc(sizeof(target));
+	target->path = build_path(object_obj,build_ext(name,".o"));
+	const char* source = build_path(object_src,name);
+
+	target->updated = (0 != stat(path,&target->info));
+	if(target->updated) {
+		build_object(target->path,source);
+		return target;
+	}
+	struct stat source_info;
+	// manually generate main source before building the object if necessary
+	assert(0==stat(source,&source_info));
+
+	if(left_is_older(target->info,source_info)) {
+		build_object(target->path, source);
+		target->updated = true;
+		return target;
+	}
+
+	va_list headers;
+	va_start(headers, name);
+	for(;;) {
+		target* header = va_arg(headers,target*);
+		if(left_is_older(target->info,header->info)) {
+			build_object(target->path, source->path);
+			target->updated = true;
+			return target;
+		}
+	}
+	assert(target->updated == false);
+	return target;
+}
+
+void generate_resource(const char* name, const char* target, const char* source) {
+	int pid = fork();
+	char* temp = temp_for(target);
+	if(pid == 0) {
+		setenv("name",name,1);
+		fd = open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644);
+		assert(fd >= 0);
+		dup2(fd, 1);
+		close(fd);
+		execlp("./data_to_header_string/pack","pack",source,NULL);
+	}
+	if(waitforok(pid)) {
+		rename(temp,target);
+	} else {
+		unlink(temp);
+		error(3,0,"generate failed");
+	}
+	free(temp);
+}
+
+
+struct target* resource(const char* name, target* source) {
+	target* target = malloc(sizeof(target));
+	target->path = build_path("gen",add_ext(name,".h"));
+	target->updated = (0 == stat(target->path,&target->info));
+	if(target->updated) {
+		generate_resource(name, target->path, source->path);
+		return target;
+	}
+	if(left_is_older(target->info, source->info)) {
+		generate_resource(name, target->path, source->path);
+		return target;
+	}
 }
 
 int main(int argc, char *argv[])
@@ -129,7 +207,9 @@ int main(int argc, char *argv[])
 	generate("gen/checkup.glade.h","checkup.glade.xml");
 	object_src = "src/checkup/";
 	object_obj = "obj/checkup/";
-	object_flags = "-Isrc";
+	string_array_push(cflags);
+	cflags.items[cflags.length] = "-Isrc";
+
 	for(i=0;i<NUM(checkups);++i) {
 		object(checkups[i]);
 	}
