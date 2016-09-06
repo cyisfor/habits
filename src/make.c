@@ -87,8 +87,15 @@ target* target_alloc(char* path) {
 }
 
 void target_free(target* target) {
-	free(target->path);
+	free((char*)target->path);
 	free(target);
+}
+
+bool left_is_older(struct stat left, struct stat right) {
+	if(left.st_mtime < right.st_mtime) return true;
+	if(left.st_mtime == right.st_mtime)
+		if(left.st_mtim.tv_nsec < right.st_mtim.tv_nsec) return true;
+	return false;
 }
 
 target* depends(target* dest, target* source) {
@@ -105,7 +112,7 @@ target* depends(target* dest, target* source) {
 /* only return a target when it has been COMPLETELY built and updated */
 
 target* program(const char* name, target_array objects) {
-	target* target = target_alloc(build_path2("bin",name));
+	target* target = target_alloc(build_path("bin",name));
 	int i;
 	for(i=0;i<objects.length;++i) {
 		if(depends(target,objects.items[i])) {

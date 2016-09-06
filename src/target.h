@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 typedef struct {
-	char* path;
+	const char* path;
 	struct stat info;
 	bool updated;
 } target;

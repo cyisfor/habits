@@ -15,7 +15,7 @@ const char* add_ext(const char* name, const char* ext) {
 	return buf;
 }
 
-char* build_path(const char* head, ...) {
+char* build_beeg_path(const char* head, ...) {
 	char* result = strdup(head);
 	ssize_t space = strlen(head);
 	ssize_t len = space;
@@ -43,4 +43,15 @@ char* build_path(const char* head, ...) {
 		len += clen + 1;
 		result[len] = '\0';
 	}
+}
+
+char* build_path(const char* head, const char* tail) {
+	ssize_t hlen = strlen(head);
+	ssize_t tlen = strlen(tail);
+	char* ret = malloc(hlen+tlen+2);
+	memcpy(ret,head,hlen);
+	ret[hlen] = '/';
+	memcpy(ret+hlen+1,tail,tlen);
+	ret[hlen+tlen+1] = '\0';
+	return ret;
 }
