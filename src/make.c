@@ -4,7 +4,7 @@
 #include "target_array.h"
 #include "myassert/assert.h"
 #include "template/apply.h"
-#include "convert.h"
+#include "d2h_convert.h"
 
 
 #include <unistd.h> // fork
@@ -324,7 +324,7 @@ void generate_resource(const char* name,
 	assert(out >= 0);
 	d2h_convert(name,out,inp);
 	rename(temp,target);
-	
+	close(out);	
 }
 
 target resource(const char* name, target source) {
