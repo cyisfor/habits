@@ -33,20 +33,31 @@ void pkg_config(const char* names) {
 		int pid = fork();
 		assert(pid >= 0);
 		if(pid == 0) {
-			dup2(io[1],0);
+			close(io[0]);
+			dup2(io[1],1);
 			close(io[1]);
-			execlp("pkg-config",cflags ? "--cflags" : "--libs",names,NULL);
+			execlp("pkg-config",
+						 "pkg-config",
+						 use_cflags ? "--cflags" : "--libs",
+						 names,
+						 NULL);
 		}
 		close(io[1]);
 		char* buf = use_cflags ? pkgconfig.cflags : pkgconfig.libs;
 		ssize_t amt = read(io[0],buf,0x100);
+		assert(amt > 0);
+		int status = 0;
+		assert(pid == waitpid(pid, &status, 0));
+		assert(WIFEXITED(status) && 0 == WEXITSTATUS(status));
+		char* token = strtok(token," ");
 		for(;;) {
-			char* token = strtok(buf," ");
-			if(token == NULL) break;
-			if(use_cflags)
+			if(use_cflags) {
 				string_PUSH(cflags,token);
-			else
+			} else {
 				string_PUSH(ldflags,token);
+			}
+			token = strtok(NULL," ");
+			if(token == NULL) break;
 		}
 		// now buf is chopped up, and cflags isn't pointing to stack data
 		// but static data instead, that won't disappear.
@@ -411,10 +422,9 @@ int main(int argc, char *argv[])
 		ssize_t ldflags;
 	} savepos = {
 		cflags.length,
-		ldflags.length;
+		ldflags.length
 	};
-	pkg_config("gtk+-3.0");
-	pkg_config("libnotify");
+	pkg_config("gtk+-3.0 libnotify");
 	
 	object_obj = build_path("obj","checkup");
 	mkdir(object_obj,0755);
