@@ -1,16 +1,9 @@
+#include "target.h"
 #include "path.h"
 
 #include "string_array.h"
 #include "target_array.h"
 
-#include <sys/stat.h>
-#include <stdbool.h>
-
-typedef struct {
-	const char* path;
-	struct stat info;
-	bool updated;
-} target;
 
 string_array cflags;
 string_array ldflags;
