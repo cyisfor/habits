@@ -72,7 +72,7 @@ void build_program(const char* dest, target_array objects) {
 	args[++i] = "-o";
 	args[++i] = dest;
 	for(i=0;i<objects.length;++i) {
-		args[++i] = objects.items[i].path;
+		args[++i] = objects.items[i]->path;
 	}
 	for(i=0;i<ldflags.length;++i) {
 		args[++i] = ldflags.items[i];
@@ -119,7 +119,7 @@ target program(const char* name, target_array objects) {
 	target target = target_alloc(build_path("bin",name));
 	int i;
 	for(i=0;i<objects.length;++i) {
-		if(depends(target,&objects.items[i])) {
+		if(depends(target,objects.items[i])) {
 			build_program(target->path, objects);
 		}
 	}
@@ -149,6 +149,18 @@ void build_object(const char* target, const char* source) {
 
 const char* object_obj = "obj/";
 const char* object_src = "src/";
+
+target object1(const char* name) {
+	struct target source = {
+		.path = build_path(object_src,name)
+	};
+	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
+	
+	if(depends(self,&source)) {
+		build_object(self->path, source.path);
+	}
+	return self;
+}
 
 target object(const char* name, ...) {
 	struct target source = {
@@ -262,13 +274,10 @@ int main(int argc, char *argv[])
 
 	struct SH sa, ta;
 
-	target_array o;
-	target_PUSH(o, object("apply_template"));
-	template_exe = depends(program("apply_template"),o);
-	target_array_clear(&o);
-
+	mkdir(object_obj,0755);
+	mkdir("gen",0755);
+	
 	object_src = "gen/";
-	mkdir(object_src);
 	sa.source = template("gen/string_array.c",
 																 "src/array.template.c",
 																 "ELEMENT_TYPE", "const char*",
@@ -286,17 +295,19 @@ int main(int argc, char *argv[])
 	ta.header = template("gen/target_array.h",
 																 "src/array.template.h",
 																 "ELEMENT_TYPE", "target",
-																 "INCLUDES", "#include \"target.h\""
+																 "INCLUDES", "#include \"target.h\"",
 																 NULL);
 
-	target target_array = object("target_array",ta.header,NULL);
+	target target_array_herpderp = object("target_array",ta.header,NULL);
 
 	object_src = "src/";
 
+	target_array o;
+
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
 	target_PUSH(o, string_array);
-	target_PUSH(o, target_array);
-	if(program("make",o).updated) {
+	target_PUSH(o, target_array_herpderp);
+	if(program("make",o)->updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
@@ -307,7 +318,7 @@ int main(int argc, char *argv[])
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
 	target e = program(PACK"/make_specialescapes", o);
-	target_array_clear(o);
+	target_array_clear(&o);
 	target special_escapes = generate(PACK"specialescapes.c", e);
 	target_free(e);
 
@@ -328,8 +339,9 @@ int main(int argc, char *argv[])
 	target_PUSH(o, object("readable_interval",NULL));
 	target_PUSH(o, object("path",NULL));
 
-	string_array_PUSH(cflags, "-Isrc");
+	string_PUSH(cflags, "-Isrc");
 	object_obj = build_path("obj","checkup");
+	mkdir(object_obj,0755);
 	object_src = "src/checkup";
 
 	struct {
