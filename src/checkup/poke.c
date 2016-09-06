@@ -51,7 +51,7 @@ static int poke_me(gpointer udata) {
 		("",
 		 g_value_get_string(&label),
 		 "task-due");
-	g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), NULL);
+	g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), this);
 	GError* err = NULL;
 	if(FALSE==notify_notification_show(n, &err)) {
 		error(0,0,err->message);

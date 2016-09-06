@@ -1,7 +1,11 @@
 #include "disabled.h"
 #include "define_this.h"
-#include <assert.h>
+
+#include "db.h"
+
 #include "update.h"
+
+#include <assert.h>
 
 void
 disabled_toggled (GtkCellRendererToggle *cell_renderer,

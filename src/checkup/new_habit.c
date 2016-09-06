@@ -11,7 +11,7 @@
 
 #define NAMES X(top) X(importance) X(description) X(frequency) X(freqadj) X(readable_frequency) X(create_habit)
 
-struct Stuff {
+struct new_habit_info {
 	#define X(name) GtkWidget* name;
 	NAMES
 	#undef X
@@ -49,7 +49,7 @@ static gdouble stretch_along(gdouble spot) {
 	return (pow(c, a * spot) + b);
 }
 
-static void update_readable_frequency(struct Stuff* this) {
+static void update_readable_frequency(struct new_habit_info* this) {
 	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(this->frequency)),
 													&err, 10);
@@ -60,7 +60,7 @@ static void update_readable_frequency(struct Stuff* this) {
 }
 
 static gboolean adjust_frequency(void* udata) {
-	DEFINE_THIS(struct Stuff);
+	DEFINE_THIS(struct new_habit_info);
 	this->updating_importance = 0;
 	gdouble spot = stretch_along(gtk_adjustment_get_value(this->freqadjderp));
 	static char micros[0x1000];
@@ -71,7 +71,7 @@ static gboolean adjust_frequency(void* udata) {
 }
 
 static gboolean do_create(GtkButton* btn, void* udata) {
-	DEFINE_THIS(struct Stuff);
+	DEFINE_THIS(struct new_habit_info);
 	char* err = NULL;
 	long frequency = strtol(gtk_entry_get_text(GTK_ENTRY(this->frequency)),
 													&err, 10)
@@ -103,14 +103,14 @@ prepare_adjust_frequency (GtkRange     *range,
 													 GtkScrollType scroll,
 													 gdouble       value,
 													 gpointer      udata) {
-	DEFINE_THIS(struct Stuff);
+	DEFINE_THIS(struct new_habit_info);
 	if(this->updating_importance) return FALSE;
 	this->updating_importance =
-		g_timeout_add(100,adjust_frequency,NULL);
+		g_timeout_add(100,adjust_frequency,this);
 }
 
 static gboolean update_text_freq(void* udata) {
-	DEFINE_THIS(struct Stuff);
+	DEFINE_THIS(struct new_habit_info);
 	update_readable_frequency(this);
 	this->typing = 0;
 	return G_SOURCE_REMOVE;
@@ -120,14 +120,14 @@ static void on_text_freq(GtkEditable* thing, gpointer udata) {
 	if(this->typing) {
 		g_source_remove(this->typing);
 	}
-	this->typing = g_timeout_add(500,update_text_freq,NULL);
+	this->typing = g_timeout_add(500,update_text_freq,this);
 }
 
-struct Stuff* new_habit_init(void) {
+struct new_habit_info* new_habit_init(void) {
 	calc_constants();
 	GtkBuilder* b = gtk_builder_new_from_string(new_habit_glade,
 																							new_habit_glade_length);
-	struct Stuff* this = malloc(sizeof(struct Stuff));
+	struct new_habit_info* this = malloc(sizeof(struct new_habit_info));
 	this->typing = 0;
 	this->updating_importance = 0;
 
@@ -140,17 +140,17 @@ struct Stuff* new_habit_init(void) {
 	this->importancederp = gtk_range_get_adjustment
 		(GTK_RANGE(this->importance));
 	g_signal_connect(this->create_habit, "clicked",
-									 G_CALLBACK(do_create), NULL);
+									 G_CALLBACK(do_create), this);
 	g_signal_connect(this->freqadj, "change-value",
-									 G_CALLBACK(prepare_adjust_frequency), NULL);
+									 G_CALLBACK(prepare_adjust_frequency), this);
 	g_signal_connect(this->frequency, "changed",
-									 G_CALLBACK(on_text_freq),NULL);
-	g_signal_connect(this->top, "delete-event",G_CALLBACK(gtk_widget_hide_on_delete),NULL);
+									 G_CALLBACK(on_text_freq),this);
+	g_signal_connect(this->top, "delete-event",G_CALLBACK(gtk_widget_hide_on_delete),this);
 	return this;
 }
 
 
-void new_habit_show(struct Stuff* this) {
+void new_habit_show(struct new_habit_info* this) {
 	gtk_entry_set_text(GTK_ENTRY(this->frequency),"86400");
 	update_readable_frequency();
 	gtk_entry_set_text(GTK_ENTRY(this->description),"");
