@@ -1,3 +1,5 @@
+#include "pathutils.h"
+
 struct target {
 	const char* path;
 	struct stat info;
@@ -98,10 +100,14 @@ target* target_alloc(char* path) {
 /* only return a target when it has been COMPLETELY built and updated */
 target* program(const char* name, ...) {
 	target* target = target_alloc(build_path("bin",name));
+	target* main_source = target_alloc(build_path(src,add_ext(name,"c")));
 	target_array args;
 	va_list_to_targets(&args);
 	if(target->updated) {
+		build_program(target->path, main_source->path, args);
+	} else if(left_is_older(target->info, main_source->info)) {
 		build_program(target->path, args);
+		target->updated = true;
 	} else {
 		int i;
 		for(i=0;i<args->length;++i) {
@@ -142,7 +148,7 @@ const char* object_obj = "obj/";
 const char* object_src = "src/";
 
 struct target* object(const char* name, ...) {
-	target* target = target_alloc(build_path(object_obj,build_ext(name,".o")));
+	target* target = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	const char* source = build_path(object_src,name);
 	if(!target->updated) {
 		struct stat source_info;
@@ -213,7 +219,7 @@ void generate_resource(const char* name,
 }
 
 struct target* resource(const char* name, target* source) {
-	target* target = target_alloc(build_path("gen",add_ext(name,".h")));
+	target* target = target_alloc(build_path("gen",add_ext(name,"h")));
 	if(target->updated) {
 		generate_resource(name, target->path, source->path);
 	} else if(left_is_older(target->info, source->info)) {
@@ -239,21 +245,48 @@ struct target* generate(const char* dest, target* program) {
 	return target;
 }
 
-struct target* template(const char* name,
+const char* template_exe = NULL;
+struct target* template(const char* dest,
 												const char* source,
 												const char* enabled,
 												const char* criteria) {
-	
+	char* temp = temp_for(dest);
+	target* target = target_alloc(dest);
+	target* build() {
+		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
+									 open(source,O_RDONLY),
+									 "ENABLED",enabled,
+									 "CRITERIA", criteria);
+		rename(temp,dest);
+		return target;
+	}
+	if(target->updated) {
+		return build();
+	} else {
+		struct stat source_info;
+		assert(0==stat(source,&source_info));
+		if(left_is_older(target->info,source_info)) {
+			return build();
+		}
+	}
 }
 
 int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
-	const char* o = object("apply_template");
-	if(program("make",).updated) {
+	if(program("make",object("apply_template")).updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
 	}
+		template("sql/pending.sql",
+					 "sql/querying.template.sql",
+					 "",
+					 "enabled AND ( ( NOT has_performed ) OR (frequency / 1.5 < elapsed))");
+	template("sql/searching.sql",
+					 "sql/querying.template.sql",
+					 ", enabled",
+					 "description LIKE ?1");
+
 	generate("gen/checkup.glade.h","checkup.glade.xml");
 	object_src = "src/checkup/";
 	object_obj = "obj/checkup/";
@@ -270,14 +303,9 @@ int main(int argc, char *argv[])
 	object_obj = "obj/";
 	object_flags = "";
 
-	template("querying.template.sql","sql/pending.sql",
-					 "",
-					 "enabled AND ( ( NOT has_performed ) OR (frequency / 1.5 < elapsed))");
-	template("querying.template.sql","sql/searching.sql",
-					 ", enabled",
-					 "description LIKE ?1");
-	object("db"); newline();
+	object("db"); 
 	object("readable_interval");
+	
 
 
 
