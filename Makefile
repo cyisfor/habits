@@ -26,9 +26,22 @@ gen/target_array.c: src/array.template.c apply_template | gen
 gen/target_array.h: src/array.template.h apply_template | gen
 	HEADER="#include \"target.h\"" ELEMENT_TYPE=target $(TEMPLATE)
 
-apply_template: CFLAGS:=$(CFLAGS) -DDO_MAIN
-apply_template: src/apply_template.c obj/myassert.o 
+bin/apply_template: CFLAGS:=$(CFLAGS) -DDO_MAIN
+bin/apply_template: src/apply_template.c obj/myassert.o 
 	$(LINK)
+
+bin/make_specialescapes: data_to_header_string/make_specialescapes.c
+	$(LINK)
+
+bin/data_to_header_string: data_to_header_string/main.c obj/data_to_header_string/convert.o
+	$(LINK)
+
+obj/data_to_header_string/convert.o: gen/specialescapes.c data_to_header_string/convert.c | obj/data_to_header_string
+	gcc $(CFLAGS) -c -o $@ -I data_to_header_string/ data_to_header_string/convert.c
+
+gen/specialescapes.c: bin/make_specialescapes
+	./$< > $@.temp
+	mv $@.temp $@
 
 obj/%.o: src/%.c
 	gcc $(CFLAGS) -c -o $@ $<
@@ -39,7 +52,7 @@ obj/%.o: gen/%.c
 obj/target_array.o: gen/target_array.c
 obj/string_array.o: gen/string_array.c
 
-bin obj gen:
+bin obj gen obj/data_to_header_string:
 	mkdir $@
 
 .PHONY: all

@@ -124,8 +124,17 @@ void show(const char* title, char**args) {
 	putchar('\n');
 }
 
+void check_terminate(const char* target) {
+	char* match = getenv("TARGET");
+	if(match == NULL) return;
+	if(strstr(target,match) != NULL) {
+		printf("reached target %s (%s)\n",target,match);
+		exit(0);
+	}
+}
+
 void build_program(const char* dest, target_array objects) {
-	if(spawn()) return;
+	if(spawn()) return check_terminate(dest);
 
 	int nobj =
 		objects.length
@@ -205,7 +214,7 @@ target program(const char* name, target_array objects) {
 }
 
 void build_object(const char* target, const char* source) {
-	if(spawn()) return;
+	if(spawn()) return check_terminate(target);
 
 	int nobj = cflags.length+5;
 	char** args = malloc(sizeof(char**)*nobj);
@@ -407,16 +416,18 @@ int main(int argc, char *argv[])
 
 #define PACK "./data_to_header_string"
 	object_src = PACK;
-	target_PUSH(o, object("make_specialescapes",NULL));
 	{
-		target e = program("make_specialescapes", o);
-		target_array_clear(&o);
+		target_array special;
+		target_PUSH(special,object("make_specialescapes",NULL));
+		target e = program("make_specialescapes", special);
+		target_array_clear(&special);
 		target special_escapes = generate(PACK"/specialescapes.c", e);
 		target_free(e);
 
 		target_PUSH(o, object("convert",special_escapes,NULL));
 	}
-	target_PUSH(o, object("main",file(PACK"/convert.h"),NULL));
+	object_src = "src/";
+	//target_PUSH(o, object("main",file(PACK"/convert.h"),NULL));
 
 	target make = program("make",o);
 	if(make->updated) {
