@@ -56,8 +56,8 @@ bool spawn(void) {
 	return false;
 }
 
-void show(const char**args) {
-	fputs("run: ",stdout);
+void show(const char* title, char**args) {
+	printf("%s: ",title);
 	bool first = true;
 	while(*args) {
 		if(first) first = false;
@@ -77,24 +77,24 @@ void build_program(const char* dest, target_array objects) {
 		+ ldflags.length
 		+ 3; // don't forget +1 for the trailing NULL
 
-	const char** args = malloc(sizeof(char**)*nobj);
+	char** args = malloc(sizeof(char**)*nobj);
 	args[0] = getenv("CC");
 	if(args[0] == NULL) args[0] = "cc";
 	int i=0, j = 0;
 	for(j=0;j<cflags.length;++j) {
-		args[++i] = cflags.items[j];
+		args[++i] = strdup(cflags.items[j]);
 	}
 	args[++i] = "-o";
-	args[++i] = dest;
+	args[++i] = strdup(dest);
 	for(j=0;j<objects.length;++j) {
-		args[++i] = objects.items[j]->path;
+		args[++i] = strdup(objects.items[j]->path);
 	}
 	for(j=0;j<ldflags.length;++j) {
-		args[++i] = ldflags.items[j];
+		args[++i] = strdup(ldflags.items[j]);
 	}
 	assert(i == nobj - 1);
 	args[nobj] = NULL;
-	show(args);
+	show("program",args);
 	execvp(args[0],(char**)args);
 }
 
@@ -113,6 +113,7 @@ void target_free(target target) {
 
 bool left_is_older(struct stat left, struct stat right) {
 	if(left.st_mtime < right.st_mtime) return true;
+	printf("maybe same second? %d %d\n",left.st_mtime,right.st_mtime);
 	if(left.st_mtime == right.st_mtime)
 		if(left.st_mtim.tv_nsec < right.st_mtim.tv_nsec) return true;
 	return false;
@@ -136,8 +137,9 @@ target program(const char* name, target_array objects) {
 	target target = target_alloc(build_path("bin",name));
 	int i;
 	for(i=0;i<objects.length;++i) {
-		if(depends(target,objects.items[i])) {
+		if(depends(target,objects.items[i])->updated) {
 			build_program(target->path, objects);
+			break;
 		}
 	}
 	return target;
@@ -147,21 +149,21 @@ void build_object(const char* target, const char* source) {
 	if(spawn()) return;
 
 	int nobj = cflags.length+5;
-	const char** args = malloc(sizeof(char**)*nobj);
+	char** args = malloc(sizeof(char**)*nobj);
 
 	args[0] = getenv("CC");
 	if(args[0] == NULL) args[0] = "cc";
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
-		args[i+1] = cflags.items[i];
+		args[i+1] = strdup(cflags.items[i]);
 	}
 	args[++i] = "-c";
 	args[++i] = "-o";
-	args[++i] = target;
-	args[++i] = source;
+	args[++i] = strdup(target);
+	args[++i] = strdup(source);
 	assert(i == nobj - 1);
 	args[nobj] = NULL;
-	show(args);
+	show("object",args);
 	execvp(args[0],(char**)args);
 }
 
@@ -174,7 +176,7 @@ target object1(const char* name) {
 	};
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
-	if(depends(self,&source)) {
+	if(depends(self,&source)->updated) {
 		build_object(self->path, source.path);
 	}
 	return self;
@@ -187,7 +189,7 @@ target object(const char* name, ...) {
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 
 	assert(0==stat(source.path,&source.info));
-	if(depends(self,&source)) {
+	if(depends(self,&source)->updated) {
 		build_object(self->path, source.path);
 	} else {
 		va_list args;
@@ -195,7 +197,7 @@ target object(const char* name, ...) {
 		for(;;) {
 			target header = va_arg(args,target);
 			if(header == NULL) break;
-			if(depends(self,header)) {
+			if(depends(self,header)->updated) {
 				build_object(self->path, source.path);
 				break;
 			}
@@ -252,7 +254,7 @@ target resource(const char* name, const char* source) {
 		.path = source
 	};
 	assert(0==stat(source,&starget.info));
-	if(depends(self,resource_exe) || depends(self,&starget)) {
+	if(depends(self,resource_exe)->updated || depends(self,&starget)->updated) {
 		generate_resource(name, self->path, source);
 	}
 	return self;
@@ -348,7 +350,7 @@ int main(int argc, char *argv[])
 #define PACK "./data_to_header_string"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
-	target e = program(PACK"/make_specialescapes", o);
+	target e = program("make_specialescapes", o);
 	target_array_clear(&o);
 	target special_escapes = generate(PACK"/specialescapes.c", e);
 	target_free(e);
