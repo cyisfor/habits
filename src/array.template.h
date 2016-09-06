@@ -21,3 +21,8 @@ static void va_list_to$(ELEMENT_TYPE)_arrayv
 static void va_list_to_$(ELEMENT_TYPE)s* result, ...);
 
 void $(ELEMENT_TYPE)_array_clear($(ELEMENT_TYPE)_array* self);
+
+#define $(ELEMENT_TYPE)_PUSH(array,thing) { \
+		$(ELEMENT_TYPE)_push(&array); \
+		array.items[array.length] = thing; \
+	}
