@@ -34,63 +34,32 @@ void resolve(target* target) {
 	target->updated = true;
 }
 
-char** va_list_to_array(va_list args) {
-	char** ret = NULL;
-	size_t space = 0;
-	size_t length = 0;
-	for(;;) {
-		if(length == space) {
-			space += 0x100;
-			ret = realloc(ret,sizeof(*ret)*0x100);
-		}
-		char* value = va_arg(args,char*);
-		ret[length++] = value;
-		if(value == NULL) break;
-	}
-	return realloc(ret,length);
-}
+#define ELEMENT_TYPE target
+#include "array.c"
+#define ELEMENT_TYPE const char
+#include "array.c"
 
-void build_program(const char* dest, char** objects) {
-	int nobj = 0;
-	va_list temp;
-	va_copy(temp,objects);
-	for(;;) {
-		++nobj;
-		d = d->next;
-	}
-	flag* flag = cflags;
-	while(flag) {
-		++nobj;
-		flag = flag->next;
-	}
+void build_program(const char* dest, array objects) {
+	int nobj =
+		objects->length
+		+ cflags->length
+		+ ldflags->length
+		+ 5; // don't forget +1 for the trailing NULL
 
-	flag = ldflags;
-	while(flag) {
-		++nobj;
-		flag = flag->next;
-	}
-
-	nobj += 5;
 	const char** args = malloc(sizeof(char**)*nobj);
 	args[0] = getenv("CC");
 	int i = 0;
-	flag = cflags;
-	while(flag) {
-		args[++i] = flag->value;
-		flag = flag->next;
+	for(i=0;i<cflags.length;++i) {
+		args[++i] = cflags.items[i].value;
 	}
 	args[++i] = "-c";
 	args[++i] = "-o";
 	args[++i] = program->path;
-	d = program->dependencies;
-	while(d) {
-		args[++i] = d->path;
-		d = d->next;
+	for(i=0;i<objects.length;++i) {
+		args[++i] = objects.items[i].path;
 	}
-	flag = ldflags;
-	while(flag) {
-		args[++i] = flag->value;
-		flag = flag->next;
+	for(i=0;i<ldflags.length;++i) {
+		args[++i] = ldflags.items[i].value;
 	}
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
@@ -110,30 +79,26 @@ target* program(const char* name, ...) {
 	target* target = malloc(sizeof(target));
 	target->path = build_assured_path("bin",name);
 	target->updated = (0 != stat(path,&target->info));
-	va_list vargs;
-	va_start(name,vargs);
-	char** args = va_list_to_array(vargs);
-	va_end(vargs);
+	array args;
+	va_list_to_array(&args);
 	if(target->updated) {
-		build_program(args);
+		build_program(name, args);
 		return target;
 	}
-	va_list buildargs;
-	va_copy(buildargs,args);
-	for(;;) {
-		target* dep = va_arg(args,target*);
-		if(dep == NULL) break;
+	int i;
+	for(i=0;i<args->length;++i) {
+		target* dep = args.items[i];
 		if(left_is_older(target->info, dep->info)) {
-			build_program(buildargs);
+			build_program(name, args);
 			target->updated = true;
 			return target;
 		}
 	}
-	return self;
+	return target;
 }
 
 struct target* object(const char* name, ...) {
-	va_list args;
+	
 	va_start(name,args);
 	target* self = malloc(sizeof(target));
 	self->path = build_path("obj",name);
