@@ -79,6 +79,17 @@ void build_program(const char* dest, target_array objects) {
 	execvp(args[0],args);
 }
 
+void target_array_clear(target_array args) {
+	int i = 0;
+	for(;i<args.length;++i) {
+		target_free(args.items[i]);
+	}
+	free(args.items);
+	args.length = 0;
+	args.space = 0;
+	args.items = NULL; // just in case
+}
+
 /* only return a target when it has been COMPLETELY built and updated */
 target* program(const char* name, ...) {
 	target* target = malloc(sizeof(target));
@@ -88,25 +99,27 @@ target* program(const char* name, ...) {
 	va_list_to_targets(&args);
 	if(target->updated) {
 		build_program(target->path, args);
-		return target;
-	}
-	int i;
-	for(i=0;i<args->length;++i) {
-		target* dep = args.items[i];
-		if(left_is_older(target->info, dep->info)) {
-			build_program(target->path, args);
-			target->updated = true;
-			return target;
+	} else {
+		int i;
+		for(i=0;i<args->length;++i) {
+			target* dep = args.items[i];
+			if(left_is_older(target->info, dep->info)) {
+				build_program(target->path, args);
+				target->updated = true;
+				break;
+			}
 		}
 	}
+	target_array_clear(args);
 	return target;
 }
 
 void build_object(const char* target, const char* source) {
-	int nobj = cflags.length
-		+5;
-
+	if(spawn()) return;
+	
+	int nobj = cflags.length+6;
 	const char** args = malloc(sizeof(char**)*nobj);
+	
 	args[0] = getenv("CC");
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
@@ -119,9 +132,7 @@ void build_object(const char* target, const char* source) {
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
 
-		
-	
-		
+	execvp(args[0],args,NULL);		
 }
 
 const char* object_obj = "obj/";
@@ -154,23 +165,31 @@ struct target* object(const char* name, ...) {
 		if(left_is_older(target->info,header->info)) {
 			build_object(target->path, source->path);
 			target->updated = true;
-			return target;
+			for(;;) {
+				target_free(header);
+				target* header = va_arg(headers,target*);
+				if(header == NULL) break;
+			}
+			break;
 		}
+		target_free(header);
 	}
+	
 	assert(target->updated == false);
 	return target;
 }
 
-void generate_resource(const char* name, const char* target, const char* source) {
-	int pid = fork();
+void do_generate(const char* exe, const char* target, const char* source) {
+	assert(target != NULL); // but source can be NULL
 	char* temp = temp_for(target);
+	int pid = fork();
 	if(pid == 0) {
 		setenv("name",name,1);
 		fd = open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644);
 		assert(fd >= 0);
 		dup2(fd, 1);
 		close(fd);
-		execlp("./data_to_header_string/pack","pack",source,NULL);
+		execlp(exe,exe,source,NULL);
 	}
 	if(waitforok(pid)) {
 		rename(temp,target);
@@ -181,6 +200,12 @@ void generate_resource(const char* name, const char* target, const char* source)
 	free(temp);
 }
 
+void generate_resource(const char* name,
+											 const char* target,
+											 const char* source) {
+	setenv("name",name);
+	do_generate("./data_to_header_string/pack",target,source);
+}
 
 struct target* resource(const char* name, target* source) {
 	target* target = malloc(sizeof(target));
@@ -188,12 +213,28 @@ struct target* resource(const char* name, target* source) {
 	target->updated = (0 == stat(target->path,&target->info));
 	if(target->updated) {
 		generate_resource(name, target->path, source->path);
-		return target;
-	}
-	if(left_is_older(target->info, source->info)) {
+	} else if(left_is_older(target->info, source->info)) {
 		generate_resource(name, target->path, source->path);
-		return target;
+		target->updated = true;
 	}
+	return target;		
+}
+
+struct target* generate(const char* dest, target* program) {
+	struct stat proginfo;
+	memcpy(&proginfo,&program->info,sizeof(proginfo));
+	target* target = program;
+	target->path = dest;
+	target->updated = (0 != stat(dest,&target->info));
+	if(target->updated) {
+		do_generate(program->path, dest, NULL);
+	} else if(left_is_older(target->info,proginfo)) {
+		do_generate(program->path, dest, NULL);
+		target->updated = true;
+	}
+	return target;
+	
+				
 }
 
 int main(int argc, char *argv[])
