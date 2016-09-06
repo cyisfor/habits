@@ -4,10 +4,13 @@
 #include "target_array.h"
 #include "myassert/assert.h"
 
-
 #include <unistd.h> // fork
 #include <error.h>
 #include <sys/wait.h> // waitpid
+#include <string.h> // strlen, memcpy
+#include <fcntl.h> // open
+#include <stdio.h> // rename...
+#include <stdlib.h> // setenv
 
 
 
@@ -146,7 +149,7 @@ void build_object(const char* target, const char* source) {
 const char* object_obj = "obj/";
 const char* object_src = "src/";
 
-struct target* object(const char* name, ...) {
+target* object(const char* name, ...) {
 	target source = {
 		.path = build_path(object_src,name)
 	};
@@ -166,20 +169,27 @@ struct target* object(const char* name, ...) {
 			}
 		}
 	}
-	free(source.path); // ehhh
+	free((char*)source.path); // ehhh
 	return self;
 }
 
 /* update: no ownership, no freeing anything, way too messy
 	 use mark/rewind allocation if needed. */
 
+char* temp_for(const char* path) {
+	ssize_t len = strlen(path);
+	char* ret = malloc(len+6);
+	memcpy(ret,path,len);
+	memcpy(ret+len,".temp",6);
+	return ret;
+}
+
 void do_generate(const char* exe, const char* target, const char* source) {
 	assert(target != NULL); // but source can be NULL
 	char* temp = temp_for(target);
 	int pid = fork();
 	if(pid == 0) {
-		setenv("name",name,1);
-		fd = open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644);
+		int fd = open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644);
 		assert(fd >= 0);
 		dup2(fd, 1);
 		close(fd);
@@ -199,11 +209,11 @@ target* resource_exe = NULL;
 void generate_resource(const char* name,
 											 const char* target,
 											 const char* source) {
-	setenv("name",name);
+	setenv("name",name, 1);
 	do_generate(resource_exe->path,target,source);
 }
 
-struct target* resource(const char* name, const char* source) {
+target* resource(const char* name, const char* source) {
 	target* self = target_alloc(build_path("gen",add_ext(name,"h")));
 	target starget = {
 		.path = source
@@ -215,15 +225,15 @@ struct target* resource(const char* name, const char* source) {
 	return self;
 }
 
-struct target* generate(const char* dest, target* program) {
-	target* self = target_alloc(dest);
+target* generate(const char* dest, target* program) {
+	target* self = target_alloc(strdup(dest));
 	if(depends(self,program)) {
 		do_generate(program->path, dest, NULL);
 	}
 	return self;
 }
 
-struct target* template(const char* dest, const char* source, ...) {
+target* template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
 	target* self = target_alloc(build_path("gen",dest));
 	target starget = {
@@ -232,7 +242,7 @@ struct target* template(const char* dest, const char* source, ...) {
 	assert(0==stat(source,&starget.info));
 	if(depends(self,&starget)) {
 		va_list args;
-		va_start(source, args);
+		va_start(args, source);
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
 									 open(source,O_RDONLY),args);
 		va_end(args);
