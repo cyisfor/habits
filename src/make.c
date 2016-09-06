@@ -21,12 +21,14 @@ string_array ldflags;
 void string_free(const char* s) {}
 
 void init_flags(void) {
-	cflags.length = 3;
+	cflags.length = 5;
 	cflags.items = NULL;
 	string_array_done_pushing(&cflags);
 	cflags.items[0] = "-g";
 	cflags.items[1] = "-O2";
 	cflags.items[2] = "-fdiagnostics-color=always";
+	cflags.items[3] = "-Isrc";
+	cflags.items[4] = "-Igen";
 
 	ldflags.length = 0;
 	ldflags.items = NULL;
@@ -61,25 +63,25 @@ void build_program(const char* dest, target_array objects) {
 		objects.length
 		+ cflags.length
 		+ ldflags.length
-		+ 4; // don't forget +1 for the trailing NULL
+		+ 3; // don't forget +1 for the trailing NULL
 
 	const char** args = malloc(sizeof(char**)*nobj);
 	args[0] = getenv("CC");
 	if(args[0] == NULL) args[0] = "cc";
-	int i = 0;
-	for(i=0;i<cflags.length;++i) {
-		args[i+1] = cflags.items[i+1];
+	int i=0, j = 0;
+	for(j=0;j<cflags.length;++j) {
+		args[++i] = cflags.items[j];
 	}
 	args[++i] = "-o";
 	args[++i] = dest;
-	for(i=0;i<objects.length;++i) {
-		args[++i] = objects.items[i]->path;
+	for(j=0;j<objects.length;++j) {
+		args[++i] = objects.items[j]->path;
 	}
-	for(i=0;i<ldflags.length;++i) {
-		args[++i] = ldflags.items[i];
+	for(j=0;j<ldflags.length;++j) {
+		args[++i] = ldflags.items[j];
 	}
 	assert(i == nobj - 1);
-	args[nobj-1] = NULL;
+	args[nobj] = NULL;
 
 	execvp(args[0],(char**)args);
 }
@@ -307,11 +309,17 @@ int main(int argc, char *argv[])
 
 	object_src = "src";
 
-	target_array o;
+	target myassert = object("myassert",NULL);
+	target path = object("path",NULL);
+
+	target_array o = {};
 
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
 	target_PUSH(o, string_array);
 	target_PUSH(o, target_array_herpderp);
+	target_PUSH(o, myassert);
+	target_PUSH(o, path);
+	
 	if(program("make",o)->updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
@@ -337,12 +345,10 @@ int main(int argc, char *argv[])
 
 	object_src = "src";
 
-	target myassert = object("myassert",NULL);
-
 	target_PUSH(o, myassert);
 	target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
 	target_PUSH(o, object("readable_interval",NULL));
-	target_PUSH(o, object("path",NULL));
+	target_PUSH(o, path);
 
 	string_PUSH(cflags, "-Isrc");
 	object_obj = build_path("obj","checkup");
