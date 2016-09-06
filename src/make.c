@@ -3,6 +3,7 @@
 #include "string_array.h"
 #include "target_array.h"
 #include "myassert/assert.h"
+#include "template/apply.h"
 
 #include <unistd.h> // fork
 #include <error.h>
@@ -262,7 +263,7 @@ int main(int argc, char *argv[])
 	struct SH sa, ta;
 
 	target_array o;
-	target_array_PUSH(o, object("apply_template"));
+	target_PUSH(o, object("apply_template"));
 	template_exe = depends(program("apply_template"),o);
 	target_array_clear(&o);
 
@@ -292,9 +293,9 @@ int main(int argc, char *argv[])
 
 	object_src = "src/";
 
-	target_array_PUSH(o, object("make",sa.header,ta.header,NULL));
-	target_array_PUSH(o, string_array);
-	target_array_PUSH(o, target_array);
+	target_PUSH(o, object("make",sa.header,ta.header,NULL));
+	target_PUSH(o, string_array);
+	target_PUSH(o, target_array);
 	if(program("make",o).updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
@@ -304,13 +305,13 @@ int main(int argc, char *argv[])
 
 #define PACK "./data_to_header/"
 	object_src = PACK;
-	target_array_PUSH(o, object("make_specialescapes",NULL));
+	target_PUSH(o, object("make_specialescapes",NULL));
 	target* e = program(PACK"/make_specialescapes", o);
 	target_array_clear(o);
 	target* special_escapes = generate(PACK"specialescapes.c", e);
 	target_free(e);
 
-	target_array_PUSH(o, object("main.c",special_escapes,NULL));
+	target_PUSH(o, object("main.c",special_escapes,NULL));
 	resource_exe = program("./data_to_header_string/pack",o);
 	target_array_clear(&o);
 
@@ -322,10 +323,10 @@ int main(int argc, char *argv[])
 
 	target* myassert = object("myassert",NULL);
 
-	target_array_PUSH(o, myassert);
-	target_array_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
-	target_array_PUSH(o, object("readable_interval",NULL));
-	target_array_PUSH(o, object("path",NULL));
+	target_PUSH(o, myassert);
+	target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
+	target_PUSH(o, object("readable_interval",NULL));
+	target_PUSH(o, object("path",NULL));
 
 	string_array_PUSH(cflags, "-Isrc");
 	object_obj = build_path("obj","checkup");
@@ -339,12 +340,12 @@ int main(int argc, char *argv[])
 		resource("checkup_glade","checkup.glade.xml")
 	};
 
-	target_array_PUSH(o, object("main",glade.checkup,NULL));
-	target_array_PUSH(o, object1("poke"));
-	target_array_PUSH(o, object1("disabled"));
-	target_array_PUSH(o, object1("prettify"));
-	target_array_PUSH(o, object1("update"));
-	target_array_PUSH(o, object("new_habit", glade.new_habit, NULL));
+	target_PUSH(o, object("main",glade.checkup,NULL));
+	target_PUSH(o, object1("poke"));
+	target_PUSH(o, object1("disabled"));
+	target_PUSH(o, object1("prettify"));
+	target_PUSH(o, object1("update"));
+	target_PUSH(o, object("new_habit", glade.new_habit, NULL));
 
 	target* checkup = program("checkup",o);
 	target_array_clear(&o);

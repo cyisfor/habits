@@ -1,9 +1,12 @@
-#include <stdlib.h> // size_t
-#include <stdarg.h>
+#include "$(ELEMENT_TYPE)_array.h"
 
 // va_list can't be rewinded (because C is retarded)
 typedef struct {
+#ifdef BY_VALUE
 	$(ELEMENT_TYPE)* items;
+#else
+	$(ELEMENT_TYPE)** items;
+#endif
 	size_t length;
 	size_t space;
 } $(ELEMENT_TYPE)_array;
