@@ -129,7 +129,7 @@ void show(const char* title, char**args) {
 void check_terminate(const char* target) {
 	char* match = getenv("TARGET");
 	if(match == NULL) return;
-	if(strstr(target,match) != NULL) {
+	if(0==strcmp(target,match)) {
 		printf("reached target %s (%s)\n",target,match);
 		exit(0);
 	}
@@ -293,6 +293,7 @@ char* temp_for(const char* path) {
 }
 
 void do_generate(const char* exe, const char* target, const char* source) {
+	printf("generate %s from %s via %s\n",target,source,exe);
 	assert(target != NULL); // but source can be NULL
 	char* temp = temp_for(target);
 	int pid = fork();
@@ -301,7 +302,6 @@ void do_generate(const char* exe, const char* target, const char* source) {
 		assert(fd >= 0);
 		dup2(fd, 1);
 		close(fd);
-		printf("generate %s from %s via %s\n",target,source,exe);
 		execlp(exe,exe,source,NULL);
 	}
 	if(waitforok(pid)) {
@@ -322,9 +322,9 @@ void generate_resource(const char* name,
 	assert(inp >= 0);
 	int out = open(temp,O_WRONLY|O_TRUNC|O_CREAT,0644);
 	assert(out >= 0);
+	d2h_convert(name,out,inp);
+	rename(temp,target);
 	
-	setenv("name",name, 1);
-	do_generate(resource_exe->path,target,source);
 }
 
 target resource(const char* name, target source) {
@@ -421,6 +421,7 @@ int main(int argc, char *argv[])
 
 	target_array o = {};
 
+	string_PUSH(cflags,"-Idata_to_header_string");
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
 	target_PUSH(o, object1("apply_template"));
 	target_PUSH(o, string_array);
@@ -469,7 +470,7 @@ int main(int argc, char *argv[])
 								NULL));
 		target searching_sql = resource
 			("searching_sql",
-			 template("sql/searching.sql",
+			 template("searching.sql",
 								"sql/querying.template.sql",
 								"CRITERIA"
 								"description LIKE ?1",
