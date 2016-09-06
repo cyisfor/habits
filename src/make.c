@@ -4,6 +4,8 @@
 #include "target_array.h"
 #include "myassert/assert.h"
 #include "template/apply.h"
+#include "convert.h"
+
 
 #include <unistd.h> // fork
 #include <error.h>
@@ -134,7 +136,7 @@ void check_terminate(const char* target) {
 }
 
 void build_program(const char* dest, target_array objects) {
-	if(spawn()) return check_terminate(dest);
+	if(spawn()) return;
 
 	int nobj =
 		objects.length
@@ -210,11 +212,12 @@ target program(const char* name, target_array objects) {
 			break;
 		}
 	}
+	check_terminate(target->path);
 	return target;
 }
 
 void build_object(const char* target, const char* source) {
-	if(spawn()) return check_terminate(target);
+	if(spawn()) return;
 
 	int nobj = cflags.length+5;
 	char** args = malloc(sizeof(char**)*nobj);
@@ -247,7 +250,8 @@ target object1(const char* name) {
 	if(depends(self,&source)->updated) {
 		build_object(self->path, source.path);
 	}
-	assert(self != NULL);
+
+	check_terminate(self->path);
 	return self;
 }
 
@@ -273,7 +277,7 @@ target object(const char* name, ...) {
 		}
 	}
 	free((char*)source.path); // ehhh
-	assert(self != NULL);
+	check_terminate(self->path);
 	return self;
 }
 
@@ -302,6 +306,7 @@ void do_generate(const char* exe, const char* target, const char* source) {
 	}
 	if(waitforok(pid)) {
 		rename(temp,target);
+		check_terminate(target);
 	} else {
 		unlink(temp);
 		error(3,0,"generate failed");
@@ -309,20 +314,25 @@ void do_generate(const char* exe, const char* target, const char* source) {
 	free(temp);
 }
 
-target resource_exe = NULL;
-
 void generate_resource(const char* name,
 											 const char* target,
 											 const char* source) {
+	char* temp = temp_for(target);
+	int inp = open(source,O_RDONLY);
+	assert(inp >= 0);
+	int out = open(temp,O_WRONLY|O_TRUNC|O_CREAT,0644);
+	assert(out >= 0);
+	
 	setenv("name",name, 1);
 	do_generate(resource_exe->path,target,source);
 }
 
 target resource(const char* name, target source) {
 	target self = target_alloc(build_path("gen",add_ext(name,"h")));
-	if(depends(self,resource_exe)->updated || depends(self,source)->updated) {
+	if(depends(self,source)->updated) {
 		generate_resource(name, self->path, source->path);
 	}
+	check_terminate(self->path);
 	return self;
 }
 
@@ -331,6 +341,7 @@ target generate(const char* dest, target program) {
 	if(depends(self,program)->updated) {
 		do_generate(program->path, dest, NULL);
 	}
+	check_terminate(self->path);
 	return self;
 }
 
@@ -350,12 +361,15 @@ target template(const char* dest, const char* source, ...) {
 		rename(temp,self->path);
 		printf("template %s -> %s\n",source,self->path);
 	}
+	check_terminate(dest);
 	return self;
 }
 
 target file(const char* path) {
 	// uhhh
-	return target_alloc(strdup(path));
+	target self = target_alloc(strdup(path));
+	check_terminate(self->path);
+	return self;
 }
 
 int main(int argc, char *argv[])
@@ -417,7 +431,7 @@ int main(int argc, char *argv[])
 #define PACK "./data_to_header_string"
 	object_src = PACK;
 	{
-		target_array special;
+		target_array special = {};
 		target_PUSH(special,object("make_specialescapes",NULL));
 		target e = program("make_specialescapes", special);
 		target_array_clear(&special);
