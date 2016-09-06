@@ -1,8 +1,14 @@
-#include "target.h"
 #include "path.h"
 
 #include "string_array.h"
 #include "target_array.h"
+#include "myassert/assert.h"
+
+
+#include <unistd.h> // fork
+#include <error.h>
+#include <sys/wait.h> // waitpid
+
 
 
 string_array cflags;
@@ -48,7 +54,7 @@ void build_program(const char* dest, target_array objects) {
 	if(spawn()) return;
 
 	int nobj =
-		objects->length
+		objects.length
 		+ cflags.length
 		+ ldflags.length
 		+ 4; // don't forget +1 for the trailing NULL
@@ -57,24 +63,25 @@ void build_program(const char* dest, target_array objects) {
 	args[0] = getenv("CC");
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
-		args[i+1] = cflags.items[i+1].value;
+		args[i+1] = cflags.items[i+1];
 	}
 	args[++i] = "-o";
-	args[++i] = program->path;
+	args[++i] = dest;
 	for(i=0;i<objects.length;++i) {
 		args[++i] = objects.items[i].path;
 	}
 	for(i=0;i<ldflags.length;++i) {
-		args[++i] = ldflags.items[i].value;
+		args[++i] = ldflags.items[i];
 	}
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
 
-	execvp(args[0],args);
+	execvp(args[0],(char**)args);
 }
 
 // MUST use a malloc'd path for every target_alloc...
 target* target_alloc(char* path) {
+	target* target = malloc(sizeof(target));
 	target->path = path;
 	target->updated = (0 == stat(target->path,&target->info));
 }
@@ -117,7 +124,7 @@ void build_object(const char* target, const char* source) {
 	args[0] = getenv("CC");
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
-		args[i+1] = cflags.items[i].value;
+		args[i+1] = cflags.items[i];
 	}
 	args[++i] = "-c";
 	args[++i] = "-o";
