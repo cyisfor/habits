@@ -1,15 +1,11 @@
-#ifndef ELEMENT_TYPE
-#error "define ELEMENT_TYPE and/or BY_VALUE then #include this"
-#endif
-
 #include <stdlib.h> // size_t
 #include <stdarg.h>
 
-#define E(n) ELEMENT_TYPE ## n
+#define E(n) $(ELEMENT_TYPE) ## n
 
 // va_list can't be rewinded (because C is retarded)
 typedef struct {
-	ELEMENT_TYPE* items;
+	$(ELEMENT_TYPE)* items;
 	size_t length;
 	size_t space;
 } E(_array);
@@ -29,10 +25,10 @@ static void E(_array_done_pushing)(E(_array)* result) {
 													sizeof(*result->items)*result->space);
 }
 
-#ifndef ELEMENT_TYPE
+#ifndef $(ELEMENT_TYPE)
 #error huh
 #endif
-#define VLTO(s) va_list_to_ ELEMENT_TYPE s
+#define VLTO(s) va_list_to_ ## $(ELEMENT_TYPE) ## s
 
 static void VLTO(_arrayv)
 (E(_array)* result, va_list args) {
@@ -40,11 +36,11 @@ static void VLTO(_arrayv)
 	for(;;) {
 		E(_array_push)(result);
 #ifdef BY_VALUE
-		ELEMENT_TYPE* value = va_arg(args, ELEMENT_TYPE*);
+		$(ELEMENT_TYPE)* value = va_arg(args, $(ELEMENT_TYPE)*);
 		if(value == NULL) break;
-		memcpy(&result->items[result->length],value,sizeof(ELEMENT_TYPE));
+		memcpy(&result->items[result->length],value,sizeof($(ELEMENT_TYPE)));
 #else
-		ELEMENT_TYPE value = va_arg(args,ELEMENT_TYPE);
+		$(ELEMENT_TYPE) value = va_arg(args,$(ELEMENT_TYPE));
 		if(value == NULL) break;
 		result->items[result->length] = value;
 #endif
