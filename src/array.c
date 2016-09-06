@@ -2,14 +2,18 @@
 #error "define ELEMENT_TYPE and/or BY_VALUE then #include this"
 #endif
 
+#include <stdlib.h> // size_t
+
+#define E(n) ELEMENT_TYPE ## n
+
 // va_list can't be rewinded (because C is retarded)
 typedef struct {
 	ELEMENT_TYPE* items;
 	size_t length;
 	size_t space;
-} ELEMENT_TYPE ## _array;
+} E(_array);
 
-static void ELEMENT_TYPE ## _array_push(ELEMENT_TYPE ## _array* result) {
+static void E(_array_push)(E(_array)* result) {
 	++result->length; // we set this item previously
 	if(result->length == result->space) {
 		result->space += 0x100;
@@ -18,18 +22,20 @@ static void ELEMENT_TYPE ## _array_push(ELEMENT_TYPE ## _array* result) {
 	}
 }
 
-static void ELEMENT_TYPE ## _array_done_pushing(ELEMENT_TYPE ## _array* result) {
+static void E(_array_done_pushing)(E(_array)* result) {
 	result->space = result->length;
 	result->items = realloc(result->items,
 													sizeof(*result->items)*result->space);
 }
 
 
-static void va_list_to_ ## ELEMENT_TYPE ## _arrayv
-(ELEMENT_TYPE ## _array* result, va_list args) {
+#define VLTO(s) va_list_to ## ELEMENT_TYPE ## s
+
+static void VLTO(_arrayv)
+(E(_array)* result, va_list args) {
 	size_t space = 0;
 	for(;;) {
-		ELEMENT_TYPE ## _array_push(result);
+		E(_array_push)(result);
 #ifdef BY_VALUE
 		ELEMENT_TYPE* value = va_arg(args, ELEMENT_TYPE*);
 		if(value == NULL) break;
@@ -40,14 +46,14 @@ static void va_list_to_ ## ELEMENT_TYPE ## _arrayv
 		result->items[result->length] = value;
 #endif
 	}
-	ELEMENT_TYPE ## _array_done_pushing(result);
+	E(_array_done_pushing)(result);
 }
 
 // this function will ONLY work if your function has exactly 1
 // non-variadic parameter.
-static void va_list_to_ ## ELEMENT_TYPE ## s(ELEMENT_TYPE ## _array* result, ...) {
+static void VLTO(s)(E(_array)* result, ...) {
 	va_list args;
 	va_start(args,result);
-	va_list_to_ ## ELEMENT_TYPE ## _arrayv(result,args);
+	VLTO(_arrayv)(result,args);
 	va_end(args);
 }

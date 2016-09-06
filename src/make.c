@@ -1,6 +1,9 @@
-#include "pathutils.h"
+#include "path.h"
 
-struct target {
+#include <sys/stat.h>
+#include <stdbool.h>
+
+typedef struct {
 	const char* path;
 	struct stat info;
 	bool updated;
@@ -305,10 +308,6 @@ int main(int argc, char *argv[])
 
 	object("db"); 
 	object("readable_interval");
-	
-
-
-
 
 	return 0;
 }
