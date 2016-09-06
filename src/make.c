@@ -343,8 +343,8 @@ target template(const char* dest, const char* source, ...) {
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
 									 open(source,O_RDONLY),args);
 		va_end(args);
-		rename(temp,dest);
-		printf("template %s -> %s\n",source,dest);
+		rename(temp,self->path);
+		printf("template %s -> %s\n",source,self->path);
 	}
 	return self;
 }
@@ -378,11 +378,12 @@ int main(int argc, char *argv[])
 	ta.source = template("target_array.c",
 											 "src/array.template.c",
 											 "ELEMENT_TYPE", "target",
+											 "HEADER", "#include\"target.h\"",
 											 NULL);
 	ta.header = template("target_array.h",
 											 "src/array.template.h",
 											 "ELEMENT_TYPE", "target",
-											 "INCLUDES", "#include \"target.h\"",
+											 "HEADER", "#include\"target.h\"",
 											 NULL);
 
 	target target_array_herpderp = object("target_array",ta.header,NULL);
