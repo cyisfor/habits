@@ -309,15 +309,10 @@ void generate_resource(const char* name,
 	do_generate(resource_exe->path,target,source);
 }
 
-target resource(const char* name, const char* source) {
+target resource(const char* name, target* source) {
 	target self = target_alloc(build_path("gen",add_ext(name,"h")));
-	struct target starget = {
-		.path = source,
-		.permanent = true
-	};
-	assert(0==stat(source,&starget.info));
-	if(depends(self,resource_exe)->updated || depends(self,&starget)->updated) {
-		generate_resource(name, self->path, source);
+	if(depends(self,resource_exe)->updated || depends(self,source)->updated) {
+		generate_resource(name, self->path, source->path);
 	}
 	return self;
 }
@@ -434,9 +429,24 @@ int main(int argc, char *argv[])
 	target_PUSH(o, myassert);
 
 	{
-		target base_sql = resource("base_sql","sql/base.sql");
-		target pending_sql = resource("pending_sql","sql/pending.sql");
-		target searching_sql = resource("searching_sql","sql/searching.sql");
+		target base_sql = resource("base_sql",file("sql/base.sql"));
+		target pending_sql = resource
+			("pending_sql",
+			 template("pending.sql",
+								"sql/querying.template.sql",
+								"CRITERIA",
+								"enabled AND ( ( NOT has_performed ) OR  (frequency / 1.5 < elapsed) )",
+								"ENABLED", "",
+								NULL));
+																					 ));
+		target searching_sql = resource
+			("searching_sql",
+			 template("sql/searching.sql",
+								"sql/querying.template.sql",
+								"CRITERIA"
+								"description LIKE ?1",
+								"ENABLED", ", enabled",
+								NULL));
 		assert(base_sql->permanent == false);
 		target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
 	}
