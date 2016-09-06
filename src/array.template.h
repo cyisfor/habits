@@ -15,7 +15,7 @@ void $(ELEMENT_TYPE)_array_push($(ELEMENT_TYPE)_array* result);
 
 void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* result); 
 
-void va_list_to$(ELEMENT_TYPE)_arrayv
+void va_list_to_$(ELEMENT_TYPE)_arrayv
 ($(ELEMENT_TYPE)_array* result, va_list args);
 
 // this function will ONLY work if your function has exactly 1

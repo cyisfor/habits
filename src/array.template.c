@@ -17,7 +17,7 @@ void $(ELEMENT_TYPE)_array_done_pushing($(ELEMENT_TYPE)_array* self) {
 													sizeof(*self->items)*self->space);
 }
 
-void va_list_to$(ELEMENT_TYPE)_arrayv
+void va_list_to_$(ELEMENT_TYPE)_arrayv
 ($(ELEMENT_TYPE)_array* self, va_list args) {
 	size_t space = 0;
 	for(;;) {
@@ -41,7 +41,7 @@ void va_list_to_$(ELEMENT_TYPE)s
 		 ($(ELEMENT_TYPE)_array* self, ...) {
 	va_list args;
 	va_start(args,self);
-	va_list_to$(ELEMENT_TYPE)_arrayv(self,args);
+	va_list_to_$(ELEMENT_TYPE)_arrayv(self,args);
 	va_end(args);
 }
 
