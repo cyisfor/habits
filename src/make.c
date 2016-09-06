@@ -15,6 +15,8 @@ typedef struct {
 string_array cflags;
 string_array ldflags;
 
+void string_free(const char* s) {}
+
 void init_flags(void) {
 	cflags.length = 3;
 	cflags.items = NULL;
@@ -213,7 +215,6 @@ struct target* generate(const char* dest, target* program) {
 	return target;
 }
 
-target* template_exe = NULL;
 struct target* template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
 	target* target = target_alloc(build_path("gen",dest));
@@ -221,7 +222,7 @@ struct target* template(const char* dest, const char* source, ...) {
 		.path: source,
 	};
 	assert(0==stat(source,&starget.info));
-	if(depends(target,template_exe) || depends(target,&starget)) {
+	if(depends(target,&starget)) {
 		va_list args;
 		va_start(source, args);
 		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
@@ -243,8 +244,7 @@ int main(int argc, char *argv[])
 	struct SH sa, ta;
 
 	target_array o;
-	target_array_push(&o);
-	o.items[o.length] = object("apply_template");
+	target_array_PUSH(o, object("apply_template"));
 	template_exe = depends(program("apply_template"),o);
 	target_array_clear(&o);
 
@@ -274,12 +274,9 @@ int main(int argc, char *argv[])
 
 	object_src = "src/";
 
-	target_array_push(&o);
-	o.items[o.length] = object("make",sa.header,ta.header,NULL)
-	target_array_push(&o);
-	o.items[o.length] = string_array;
-	target_array_push(&o);
-	o.items[o.length] = target_array;
+	target_array_PUSH(o, object("make",sa.header,ta.header,NULL));
+	target_array_PUSH(o, string_array);
+	target_array_PUSH(o, target_array);
 	if(program("make",o).updated) {
 		setenv("retryderp","1",1);
 		execvp(argv[0],argv);
@@ -289,16 +286,13 @@ int main(int argc, char *argv[])
 
 #define PACK "./data_to_header/"
 	object_src = PACK;
-	target_array_push(&o);
-	o.items[o.length] = object("make_specialescapes",NULL);
+	target_array_PUSH(o, object("make_specialescapes",NULL));
 	target* e = program(PACK"/make_specialescapes", o);
 	target_array_clear(o);
 	target* special_escapes = generate(PACK"specialescapes.c", e);
 	target_free(e);
 
-	target_array_push(&o);
-	o.items[o.length] = object("main.c",special_escapes,NULL);
-	target_array_push(&o);
+	target_array_PUSH(o, object("main.c",special_escapes,NULL));
 	resource_exe = program("./data_to_header_string/pack",o);
 	target_array_clear(&o);
 
@@ -310,19 +304,12 @@ int main(int argc, char *argv[])
 
 	target* myassert = object("myassert",NULL);
 
-	target_array_push(&o);
-	target_array_push(&o);
-	target_array_push(&o);
-	target_array_push(&o);
+	target_array_PUSH(o, myassert);
+	target_array_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
+	target_array_PUSH(o, object("readable_interval",NULL));
+	target_array_PUSH(o, object("path",NULL));
 
-	o.items[o.length-3] = myassert;
-	o.items[o.length-2] =
-		object("db", base_sql, pending_sql, searching_sql, NULL);
-	o.items[o.length-1] = object("readable_interval",NULL);
-	o.items[o.length] = object("path",NULL);
-
-	string_array_push(&cflags);
-	cflags.items[cflags.length] = "-Isrc";
+	string_array_PUSH(cflags, "-Isrc");
 	object_obj = build_path("obj","checkup");
 	object_src = "src/checkup";
 
@@ -334,48 +321,15 @@ int main(int argc, char *argv[])
 		resource("checkup_glade","checkup.glade.xml")
 	};
 
-	target_array_push(&o);
-	o.items[o.length] = object("main",glade.checkup,NULL);
-	target_array_push(&o);
-	o.items[o.length] = object("main",glade.checkup,NULL);
-	target* checkups[] = {
-		depends(object("main"),glade.checkup),
-		object("poke"),
-		object("disabled"),
-		object("prettify"),
-		object("update"),
-		object("search"),
-		depends(object("new_habit"),glade.new_habit),
-	};
+	target_array_PUSH(o, object("main",glade.checkup,NULL));
+	target_array_PUSH(o, object1("poke"));
+	target_array_PUSH(o, object1("disabled"));
+	target_array_PUSH(o, object1("prettify"));
+	target_array_PUSH(o, object1("update"));
+	target_array_PUSH(o, object("new_habit", glade.new_habit, NULL));
 
-	target* checkup = program("checkup",checkups,objects,NULL);
-	for(i=0;i<NUM(checkups);++i) {
-		depends(checkup,checkups[i]);
-	}
-	for(i=0;i<NUM(objects);++i) {
-		depends(checkup,objects[i]);
-	}
-
-	program("checkup",
-					object(
-
-
-	generate("gen/checkup.glade.h","checkup.glade.xml");
-	object_src = "src/checkup/";
-	object_obj = "obj/checkup/";
-
-	for(i=0;i<NUM(checkups);++i) {
-		object(checkups[i]);
-	}
-
-	newline();
-
-	object_src = "src/";
-	object_obj = "obj/";
-	object_flags = "";
-
-	object("db");
-	object("readable_interval");
+	target* checkup = program("checkup",o);
+	target_array_clear(&o);
 
 	return 0;
 }
