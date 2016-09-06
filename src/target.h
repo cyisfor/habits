@@ -1,8 +1,8 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 
-typedef struct {
+typedef struct target {
 	const char* path;
 	struct stat info;
 	bool updated;
-} target;
+} *target;

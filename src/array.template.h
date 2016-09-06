@@ -5,7 +5,7 @@ $(HEADER)
 
 // va_list can't be rewinded (because C is retarded)
 typedef struct {
-	$(ELEMENT_TYPE)** items;
+	$(ELEMENT_TYPE)* items;
 	size_t length;
 	size_t space;
 } $(ELEMENT_TYPE)_array;

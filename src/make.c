@@ -84,13 +84,13 @@ void build_program(const char* dest, target_array objects) {
 }
 
 // MUST use a malloc'd path for every target_alloc...
-target* target_alloc(char* path) {
-	target* target = malloc(sizeof(target));
+target target_alloc(char* path) {
+	target target = malloc(sizeof(target));
 	target->path = path;
 	target->updated = (0 == stat(target->path,&target->info));
 }
 
-void target_free(target* target) {
+void target_free(target target) {
 	free((char*)target->path);
 	free(target);
 }
@@ -102,7 +102,7 @@ bool left_is_older(struct stat left, struct stat right) {
 	return false;
 }
 
-target* depends(target* dest, target* source) {
+target depends(target dest, target source) {
 	// only call this when you can respond to ->updated by building
 	if(!dest->updated) {
 		if(left_is_older(dest->info, source->info)) {
@@ -115,8 +115,8 @@ target* depends(target* dest, target* source) {
 
 /* only return a target when it has been COMPLETELY built and updated */
 
-target* program(const char* name, target_array objects) {
-	target* target = target_alloc(build_path("bin",name));
+target program(const char* name, target_array objects) {
+	target target = target_alloc(build_path("bin",name));
 	int i;
 	for(i=0;i<objects.length;++i) {
 		if(depends(target,&objects.items[i])) {
@@ -150,11 +150,11 @@ void build_object(const char* target, const char* source) {
 const char* object_obj = "obj/";
 const char* object_src = "src/";
 
-target* object(const char* name, ...) {
-	target source = {
+target object(const char* name, ...) {
+	struct target source = {
 		.path = build_path(object_src,name)
 	};
-	target* self = target_alloc(build_path(object_obj,add_ext(name,"o")));
+	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
 	if(depends(self,&source)) {
 		build_object(self->path, source.path);
@@ -162,7 +162,7 @@ target* object(const char* name, ...) {
 		va_list args;
 		va_start(args, name);
 		for(;;) {
-			target* header = va_arg(args,target*);
+			target header = va_arg(args,target);
 			if(header == NULL) break;
 			if(depends(self,header)) {
 				build_object(self->path, source.path);
@@ -205,7 +205,7 @@ void do_generate(const char* exe, const char* target, const char* source) {
 	free(temp);
 }
 
-target* resource_exe = NULL;
+target resource_exe = NULL;
 
 void generate_resource(const char* name,
 											 const char* target,
@@ -214,9 +214,9 @@ void generate_resource(const char* name,
 	do_generate(resource_exe->path,target,source);
 }
 
-target* resource(const char* name, const char* source) {
-	target* self = target_alloc(build_path("gen",add_ext(name,"h")));
-	target starget = {
+target resource(const char* name, const char* source) {
+	target self = target_alloc(build_path("gen",add_ext(name,"h")));
+	struct target starget = {
 		.path = source
 	};
 	assert(0==stat(source,&starget.info));
@@ -226,18 +226,18 @@ target* resource(const char* name, const char* source) {
 	return self;
 }
 
-target* generate(const char* dest, target* program) {
-	target* self = target_alloc(strdup(dest));
+target generate(const char* dest, target program) {
+	target self = target_alloc(strdup(dest));
 	if(depends(self,program)) {
 		do_generate(program->path, dest, NULL);
 	}
 	return self;
 }
 
-target* template(const char* dest, const char* source, ...) {
+target template(const char* dest, const char* source, ...) {
 	char* temp = temp_for(dest);
-	target* self = target_alloc(build_path("gen",dest));
-	target starget = {
+	target self = target_alloc(build_path("gen",dest));
+	struct target starget = {
 		.path = source,
 	};
 	assert(0==stat(source,&starget.info));
@@ -256,8 +256,8 @@ int main(int argc, char *argv[])
 {
 	assert(getenv("retryderp")==NULL);
 	struct SH {
-		target* source;
-		target* header;
+		target source;
+		target header;
 	};
 
 	struct SH sa, ta;
@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
 																 "src/array.template.h",
 																 "ELEMENT_TYPE", "const char*",
 																 NULL);
-	target* string_array = object("string_array",sa.header,NULL);
+	target string_array = object("string_array",sa.header,NULL);
 
 	ta.source = template("gen/target_array.c",
 																 "src/array.template.c",
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 																 "INCLUDES", "#include \"target.h\""
 																 NULL);
 
-	target* target_array = object("target_array",ta.header,NULL);
+	target target_array = object("target_array",ta.header,NULL);
 
 	object_src = "src/";
 
@@ -306,22 +306,22 @@ int main(int argc, char *argv[])
 #define PACK "./data_to_header/"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
-	target* e = program(PACK"/make_specialescapes", o);
+	target e = program(PACK"/make_specialescapes", o);
 	target_array_clear(o);
-	target* special_escapes = generate(PACK"specialescapes.c", e);
+	target special_escapes = generate(PACK"specialescapes.c", e);
 	target_free(e);
 
 	target_PUSH(o, object("main.c",special_escapes,NULL));
 	resource_exe = program("./data_to_header_string/pack",o);
 	target_array_clear(&o);
 
-	target* base_sql = resource("base_sql","sql/base.sql");
-	target* pending_sql = resource("pending_sql","sql/pending.sql");
-	target* searching_sql = resource("searching_sql","sql/searching.sql");
+	target base_sql = resource("base_sql","sql/base.sql");
+	target pending_sql = resource("pending_sql","sql/pending.sql");
+	target searching_sql = resource("searching_sql","sql/searching.sql");
 
 	object_src = "src/";
 
-	target* myassert = object("myassert",NULL);
+	target myassert = object("myassert",NULL);
 
 	target_PUSH(o, myassert);
 	target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
@@ -333,8 +333,8 @@ int main(int argc, char *argv[])
 	object_src = "src/checkup";
 
 	struct {
-		target* new_habit;
-		target* checkup;
+		target new_habit;
+		target checkup;
 	} glade = {
 		resource("new_habit_glade","new_habit.glade.xml"),
 		resource("checkup_glade","checkup.glade.xml")
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
 	target_PUSH(o, object1("update"));
 	target_PUSH(o, object("new_habit", glade.new_habit, NULL));
 
-	target* checkup = program("checkup",o);
+	target checkup = program("checkup",o);
 	target_array_clear(&o);
 
 	return 0;
