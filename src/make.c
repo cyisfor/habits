@@ -159,15 +159,16 @@ target target_alloc(char* path) {
 	target self = malloc(sizeof(struct target));
 	self->path = path;
 	self->updated = (0 != stat(self->path,&self->info));
+	self->permanent = false;
 	return self;
 }
 
 void target_free(target target) {
 	if(target->permanent == false) {
-		printf("%s wasn't permanent\n",target->path);
+		//printf("%s wasn't permanent\n",target->path);
 		free((char*)target->path);
+		free(target);
 	}
-	free(target);
 }
 
 bool left_is_older(struct stat left, struct stat right) {
@@ -180,9 +181,9 @@ bool left_is_older(struct stat left, struct stat right) {
 target depends(target dest, target source) {
 	// only call this when you can respond to ->updated by building
 	if(!dest->updated) {
-		if(left_is_older(dest->info, source->info)) {
+		if(source->updated || left_is_older(dest->info, source->info)) {
 			// dest->build()
-			printf("oldered %s %s\n",dest->path,source->path);
+			//printf("oldered %s %s\n",dest->path,source->path);
 			dest->updated = true;
 		}
 	} 
@@ -311,7 +312,8 @@ void generate_resource(const char* name,
 target resource(const char* name, const char* source) {
 	target self = target_alloc(build_path("gen",add_ext(name,"h")));
 	struct target starget = {
-		.path = source
+		.path = source,
+		.permanent = true
 	};
 	assert(0==stat(source,&starget.info));
 	if(depends(self,resource_exe)->updated || depends(self,&starget)->updated) {
@@ -342,6 +344,7 @@ target template(const char* dest, const char* source, ...) {
 									 open(source,O_RDONLY),args);
 		va_end(args);
 		rename(temp,dest);
+		printf("template %s -> %s\n",source,dest);
 	}
 	return self;
 }
@@ -390,7 +393,7 @@ int main(int argc, char *argv[])
 	target myassert = object("myassert",NULL);
 	myassert->permanent = true;
 	target path = object("path",NULL);
-	myassert->permanent = true;
+	path->permanent = true;
 
 	target_array o = {};
 
@@ -433,7 +436,7 @@ int main(int argc, char *argv[])
 		target base_sql = resource("base_sql","sql/base.sql");
 		target pending_sql = resource("pending_sql","sql/pending.sql");
 		target searching_sql = resource("searching_sql","sql/searching.sql");
-		
+		assert(base_sql->permanent == false);
 		target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
 	}
 	target_PUSH(o, object("readable_interval",NULL));
@@ -446,7 +449,8 @@ int main(int argc, char *argv[])
 		cflags.length,
 		ldflags.length
 	};
-	pkg_config("gtk+-3.0 libnotify");
+	pkg_config("gtk+-3.0 libnotify sqlite3");
+	string_PUSH(ldflags,"-lm");
 	
 	object_obj = build_path("obj","checkup");
 	mkdir(object_obj,0755);
@@ -462,6 +466,7 @@ int main(int argc, char *argv[])
 
 	target_PUSH(o, object("main",glade.checkup,NULL));
 	target_PUSH(o, object1("poke"));
+	target_PUSH(o, object1("search"));
 	target_PUSH(o, object1("disabled"));
 	target_PUSH(o, object1("prettify"));
 	target_PUSH(o, object1("update"));

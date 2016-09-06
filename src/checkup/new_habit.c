@@ -3,7 +3,7 @@
 #include "readable_interval.h"
 #include "define_this.h"
 
-#include "new_habit.glade.h"
+#include "new_habit_glade.h"
 
 #include <gtk/gtk.h>
 #include <math.h>

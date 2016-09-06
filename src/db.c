@@ -1,8 +1,8 @@
 #include "db.h"
 #include "litlen.h"
-#include "base.sql.h"
-#include "pending.sql.h"
-#include "searching.sql.h"
+#include "base_sql.h"
+#include "pending_sql.h"
+#include "searching_sql.h"
 #include <sqlite3.h>
 #include <error.h>
 #include <stdbool.h>
