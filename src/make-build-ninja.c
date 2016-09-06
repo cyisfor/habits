@@ -90,11 +90,14 @@ void target_array_clear(target_array args) {
 	args.items = NULL; // just in case
 }
 
+target* target_alloc(char* path) {
+	target->path = path;
+	target->updated = (0 == stat(target->path,&target->info));
+}
+
 /* only return a target when it has been COMPLETELY built and updated */
 target* program(const char* name, ...) {
-	target* target = malloc(sizeof(target));
-	target->path = build_assured_path("bin",name);
-	target->updated = (0 != stat(path,&target->info));
+	target* target = target_alloc(build_path("bin",name));
 	target_array args;
 	va_list_to_targets(&args);
 	if(target->updated) {
@@ -116,10 +119,10 @@ target* program(const char* name, ...) {
 
 void build_object(const char* target, const char* source) {
 	if(spawn()) return;
-	
+
 	int nobj = cflags.length+6;
 	const char** args = malloc(sizeof(char**)*nobj);
-	
+
 	args[0] = getenv("CC");
 	int i = 0;
 	for(i=0;i<cflags.length;++i) {
@@ -132,31 +135,27 @@ void build_object(const char* target, const char* source) {
 	assert(i == nobj - 1);
 	args[nobj-1] = NULL;
 
-	execvp(args[0],args,NULL);		
+	execvp(args[0],args,NULL);
 }
 
 const char* object_obj = "obj/";
 const char* object_src = "src/";
 
 struct target* object(const char* name, ...) {
-	target* target = malloc(sizeof(target));
-	target->path = build_path(object_obj,build_ext(name,".o"));
+	target* target = target_alloc(build_path(object_obj,build_ext(name,".o")));
 	const char* source = build_path(object_src,name);
+	if(!target->updated) {
+		struct stat source_info;
+		// manually generate main source before building the object if necessary
+		assert(0==stat(source,&source_info));
 
-	target->updated = (0 != stat(path,&target->info));
-	if(target->updated) {
-		build_object(target->path,source);
-		return target;
+		if(!left_is_older(target->info,source_info))
+			return target;
 	}
-	struct stat source_info;
-	// manually generate main source before building the object if necessary
-	assert(0==stat(source,&source_info));
-
-	if(left_is_older(target->info,source_info)) {
-		build_object(target->path, source);
-		target->updated = true;
-		return target;
-	}
+	build_object(target->path, source);
+	target->updated = true;
+	return target;
+}
 
 	va_list headers;
 	va_start(headers, name);
@@ -174,10 +173,16 @@ struct target* object(const char* name, ...) {
 		}
 		target_free(header);
 	}
-	
+
 	assert(target->updated == false);
 	return target;
 }
+
+/* HAX:
+	 all targets passed are owned and must be freed,
+	 but you can reuse one of the targets as the return value,
+	 passing ownership back to the parent function.
+*/
 
 void do_generate(const char* exe, const char* target, const char* source) {
 	assert(target != NULL); // but source can be NULL
@@ -208,21 +213,20 @@ void generate_resource(const char* name,
 }
 
 struct target* resource(const char* name, target* source) {
-	target* target = malloc(sizeof(target));
-	target->path = build_path("gen",add_ext(name,".h"));
-	target->updated = (0 == stat(target->path,&target->info));
+	target* target = target_alloc(build_path("gen",add_ext(name,".h")));
 	if(target->updated) {
 		generate_resource(name, target->path, source->path);
 	} else if(left_is_older(target->info, source->info)) {
 		generate_resource(name, target->path, source->path);
 		target->updated = true;
 	}
-	return target;		
+	return target;
 }
 
 struct target* generate(const char* dest, target* program) {
 	struct stat proginfo;
 	memcpy(&proginfo,&program->info,sizeof(proginfo));
+	// reusing program here instead of pointless malloc/free
 	target* target = program;
 	target->path = dest;
 	target->updated = (0 != stat(dest,&target->info));
@@ -233,8 +237,13 @@ struct target* generate(const char* dest, target* program) {
 		target->updated = true;
 	}
 	return target;
+}
+
+struct target* template(const char* name,
+												const char* source,
+												const char* enabled,
+												const char* criteria) {
 	
-				
 }
 
 int main(int argc, char *argv[])
