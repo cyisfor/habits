@@ -163,7 +163,10 @@ target target_alloc(char* path) {
 }
 
 void target_free(target target) {
-	free((char*)target->path);
+	if(target->permanent == false) {
+		printf("%s wasn't permanent\n",target->path);
+		free((char*)target->path);
+	}
 	free(target);
 }
 
@@ -234,6 +237,7 @@ target object1(const char* name) {
 	if(depends(self,&source)->updated) {
 		build_object(self->path, source.path);
 	}
+	assert(self != NULL);
 	return self;
 }
 
@@ -259,6 +263,7 @@ target object(const char* name, ...) {
 		}
 	}
 	free((char*)source.path); // ehhh
+	assert(self != NULL);
 	return self;
 }
 
@@ -366,7 +371,7 @@ int main(int argc, char *argv[])
 											 "HEADER", "typedef const char* string;",
 											 NULL);
 	target string_array = object("string_array",sa.header,NULL);
-
+	string_array->permanent = true;
 	ta.source = template("target_array.c",
 											 "src/array.template.c",
 											 "ELEMENT_TYPE", "target",
@@ -378,11 +383,14 @@ int main(int argc, char *argv[])
 											 NULL);
 
 	target target_array_herpderp = object("target_array",ta.header,NULL);
-
+	target_array_herpderp->permanent = true;
+	
 	object_src = "src";
 
 	target myassert = object("myassert",NULL);
+	myassert->permanent = true;
 	target path = object("path",NULL);
+	myassert->permanent = true;
 
 	target_array o = {};
 
@@ -406,23 +414,28 @@ int main(int argc, char *argv[])
 #define PACK "./data_to_header_string"
 	object_src = PACK;
 	target_PUSH(o, object("make_specialescapes",NULL));
-	target e = program("make_specialescapes", o);
-	target_array_clear(&o);
-	target special_escapes = generate(PACK"/specialescapes.c", e);
-	target_free(e);
+	{
+		target e = program("make_specialescapes", o);
+		target_array_clear(&o);
+		target special_escapes = generate(PACK"/specialescapes.c", e);
+		target_free(e);
 
-	target_PUSH(o, object("main",special_escapes,NULL));
+		target_PUSH(o, object("main",special_escapes,NULL));
+	}
 	resource_exe = program("pack",o);
 	target_array_clear(&o);
 
-	target base_sql = resource("base_sql","sql/base.sql");
-	target pending_sql = resource("pending_sql","sql/pending.sql");
-	target searching_sql = resource("searching_sql","sql/searching.sql");
-
 	object_src = "src";
-
+		
 	target_PUSH(o, myassert);
-	target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
+
+	{
+		target base_sql = resource("base_sql","sql/base.sql");
+		target pending_sql = resource("pending_sql","sql/pending.sql");
+		target searching_sql = resource("searching_sql","sql/searching.sql");
+		
+		target_PUSH(o, object("db", base_sql, pending_sql, searching_sql, NULL));
+	}
 	target_PUSH(o, object("readable_interval",NULL));
 	target_PUSH(o, path);
 
@@ -455,7 +468,6 @@ int main(int argc, char *argv[])
 	target_PUSH(o, object("new_habit", glade.new_habit, NULL));
 
 	target checkup = program("checkup",o);
-	target_array_clear(&o);
 
 	return 0;
 }

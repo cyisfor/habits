@@ -5,4 +5,5 @@ typedef struct target {
 	const char* path;
 	struct stat info;
 	bool updated;
+	bool permanent;
 } *target;
