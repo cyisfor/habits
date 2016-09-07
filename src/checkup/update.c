@@ -89,15 +89,17 @@ int update_intervals(gpointer udata) {
 	}
 
 	if(max_ratio >= 1) {
-		if(this->alarmed == false) {
-			this->alarmed = true;
+		if(this->alarmed == FALSE) {
+			this->alarmed = TRUE;
 			gtk_window_set_icon_name(this->top,"gtk-no");
 			gtk_window_set_default_icon_name("gtk-no");
 		}
-	} else if(this->alarmed) {
-		this->alarmed = false;
-		gtk_window_set_default_icon_name("gtk-yes");
-		gtk_window_set_icon_name(this->top,"gtk-yes");
+	} else {
+		if(this->alarmed == TRUE) {
+			this->alarmed = FALSE;
+			gtk_window_set_default_icon_name("gtk-yes");
+			gtk_window_set_icon_name(this->top,"gtk-yes");
+		}
 	}
 
 	// take off expired this->items at the end

@@ -239,6 +239,15 @@ void build_object(const char* target, const char* source) {
 	execvp(args[0],(char**)args);
 }
 
+void goodstat(const char* path, struct stat* buf) {
+	int res = stat(path,buf);
+	if(res != 0) {
+		error(res,0,"couldn't stat %s",path);
+	}
+}
+
+
+
 const char* object_obj = "obj";
 const char* object_src = "src";
 const char* object_name = NULL;
@@ -248,6 +257,8 @@ target object1(const char* name) {
 	struct target source = {
 		.path = build_path(object_src,add_ext(dername,"c"))
 	};
+	goodstat(source.path,&source.info);
+	
 	target self = target_alloc(build_path(object_obj,add_ext(name,"o")));
 	
 	if(depends(self,&source)->updated) {
@@ -257,15 +268,6 @@ target object1(const char* name) {
 	check_terminate(self->path);
 	return self;
 }
-
-
-void goodstat(const char* path, struct stat* buf) {
-	int res = stat(path,buf);
-	if(res != 0) {
-		error(res,0,"couldn't stat %s",path);
-	}
-}
-
 
 target object(const char* name, ...) {
 	const char* dername = name;

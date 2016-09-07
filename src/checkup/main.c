@@ -50,7 +50,8 @@ int main(int argc, char *argv[])
 	};
 	struct update_info update_info = {
 		items: items,
-		top: GTK_WINDOW(top)
+		top: GTK_WINDOW(top),
+		alarmed: FALSE
 	};
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
