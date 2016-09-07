@@ -79,14 +79,15 @@ void pkg_config(const char* names) {
 void string_free(const char* s) {}
 
 void init_flags(void) {
-	cflags.length = 5;
+	cflags.length = 0;
 	cflags.items = NULL;
+	string_array_PUSH(cflags,"-g");
+//	string_array_PUSH(cflags,"-O2");
+	string_array_PUSH(cflags,"-fdiagnostics-color=always");
+	string_array_PUSH(cflags,"-I.");
+	string_array_PUSH(cflags,"-Isrc");
+	string_array_PUSH(cflags,"-Igen");
 	string_array_done_pushing(&cflags);
-	cflags.items[0] = "-g";
-	cflags.items[1] = "-O2";
-	cflags.items[2] = "-fdiagnostics-color=always";
-	cflags.items[3] = "-Isrc";
-	cflags.items[4] = "-Igen";
 
 	ldflags.length = 0;
 	ldflags.items = NULL;
@@ -337,7 +338,8 @@ void generate_resource(const char* name,
 	assert(out >= 0);
 	d2h_convert(name,out,inp);
 	rename(temp,target);
-	close(out);	
+	close(out);
+	printf("resource %s -> %s\n",source,name);
 }
 
 target resource(const char* name, target source) {
@@ -359,8 +361,8 @@ target generate(const char* dest, target program) {
 }
 
 target template(const char* dest, const char* source, ...) {
-	char* temp = temp_for(dest);
 	target self = target_alloc(build_path("gen",dest));
+	char* temp = temp_for(self->path);
 	struct target starget = {
 		.path = source,
 	};
@@ -368,10 +370,11 @@ target template(const char* dest, const char* source, ...) {
 	if(depends(self,&starget)->updated) {
 		va_list args;
 		va_start(args, source);
-		apply_template(open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644),
-									 open(source,O_RDONLY),args);
+		int derp = open(temp,O_WRONLY|O_CREAT|O_TRUNC,0644);
+		apply_template(derp, open(source,O_RDONLY),args);
 		va_end(args);
 		rename(temp,self->path);
+		close(derp);
 		printf("template %s -> %s\n",source,self->path);
 	}
 	check_terminate(dest);
@@ -425,12 +428,14 @@ int main(int argc, char *argv[])
 	target target_array_herpderp = object("target_array",ta.header,NULL);
 	target_array_herpderp->permanent = true;
 	
+
 	object_src = "myassert";
 	object_name = "module"; // ehhhh
 	target myassert = object("myassert",NULL);
 	myassert->permanent = true;
 	object_src = "src";
 	object_name = NULL;
+
 	target path = object("path",NULL);
 	path->permanent = true;
 
@@ -438,11 +443,15 @@ int main(int argc, char *argv[])
 
 	string_PUSH(cflags,"-Idata_to_header_string");
 	target_PUSH(o, object("make",sa.header,ta.header,NULL));
+	--cflags.length;
+	string_array_done_pushing(&cflags);
+	
 	object_src = "template";
 	object_name = "apply";
 	target_PUSH(o, object1("apply_template"));
 	object_src = "src";
 	object_name = NULL;
+
 	target_PUSH(o, string_array);
 	target_PUSH(o, target_array_herpderp);
 	target_PUSH(o, myassert);
@@ -493,7 +502,7 @@ int main(int argc, char *argv[])
 			("searching_sql",
 			 template("searching.sql",
 								"sql/querying.template.sql",
-								"CRITERIA"
+								"CRITERIA",
 								"description LIKE ?1",
 								"ENABLED", ", enabled",
 								NULL));

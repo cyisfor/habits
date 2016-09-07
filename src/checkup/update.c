@@ -43,8 +43,9 @@ int update_intervals(gpointer udata) {
 		const char* elapsed = "never";
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
-			color_for(&thingy, (habit.elapsed - habit.frequency) /
-								(double)habit.frequency);
+			double ratio = (habit.elapsed - habit.frequency) /
+				(double)habit.frequency;
+			color_for(&thingy, ratio);
 		}
 
 		if(has_row == TRUE) {

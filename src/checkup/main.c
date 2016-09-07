@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 #define GETW(name) GTK_WIDGET(GET(name))
 #define DEFW(name) GtkWidget* name = GETW(#name)
 	DEFW(top);
+	gtk_window_set_icon_name(GTK_WINDOW(top),"gtk-yes");
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
 	GtkTreeSelection* selection = GTK_TREE_SELECTION(GET("selection"));
 	DEFW(didit);

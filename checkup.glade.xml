@@ -44,6 +44,7 @@
     <property name="role">Habit</property>
     <property name="default_width">400</property>
     <property name="default_height">400</property>
+    <property name="icon_name">gtk-yes</property>
     <child>
       <object class="GtkBox" id="box1">
         <property name="visible">True</property>
