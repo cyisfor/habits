@@ -7,7 +7,6 @@ struct update_info {
 	GtkTreeModel* items;
 	GtkWindow* top;
 	guint updater;
-	gboolean alarmed;
 };
 
 int update_intervals(void* udata);

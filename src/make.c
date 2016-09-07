@@ -521,7 +521,7 @@ int main(int argc, char *argv[])
 		cflags.length,
 		ldflags.length
 	};
-	pkg_config("gtk+-3.0 libnotify sqlite3");
+	pkg_config("gtk+-3.0 cairo libnotify sqlite3");
 	string_PUSH(ldflags,"-lm");
 	
 	object_obj = build_path("obj","checkup");

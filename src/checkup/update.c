@@ -7,6 +7,9 @@
 
 #include <glib.h> // G_SOURCE_CONTINUE etc
 #include <gtk/gtk.h>
+#include <cairo.h>
+#include <math.h> // M_PI
+
 
 static void color_for(GdkRGBA* dest, double ratio) {
 	double r,g,b;
@@ -31,12 +34,6 @@ static void color_for(GdkRGBA* dest, double ratio) {
 COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
-
-void update_init(struct update_info* this) {
-	this->cairo_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB30,
-																									 64,64);
-	this->cairo = cairo_create(this->cairo_surface);
-}
 
 int update_intervals(gpointer udata) {
 	DEFINE_THIS(struct update_info);
@@ -94,14 +91,26 @@ int update_intervals(gpointer udata) {
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
 
-	start_updating_icon(this);
-	GdkPixbuf* icon = gdk_pixbuf_get_from_surface(this->cairo_surface,
+	color_for(&thingy,max_ratio);
+	cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+																												64,64);
+	cairo_t* cairo = cairo_create(surface);
+	cairo_set_source_rgb(cairo,
+											 thingy.red,
+											 thingy.green,
+											 thingy.blue);
+	cairo_arc(cairo,32,32,32,0,2*M_PI);
+	cairo_fill(cairo);
+	cairo_clip(cairo);
+	cairo_destroy(cairo);
+	GdkPixbuf* icon = gdk_pixbuf_get_from_surface(surface,
 																								0,0,
 																								64,64);
-	
-	gtk_window_set_icon_name(this->top,icon); 
-	gtk_window_set_default_icon_name(icon);
-	// g_unref(icon) ?
+	cairo_surface_destroy(surface);
+	gtk_window_set_icon(this->top,icon); 
+	gtk_window_set_default_icon(icon);
+*/
+	// XXX: g_unref(icon) ?
 
 	// take off expired this->items at the end
 	if(has_row) {
