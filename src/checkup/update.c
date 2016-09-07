@@ -32,6 +32,12 @@ COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
+void update_init(struct update_info* this) {
+	this->cairo_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB30,
+																									 64,64);
+	this->cairo = cairo_create(this->cairo_surface);
+}
+
 int update_intervals(gpointer udata) {
 	DEFINE_THIS(struct update_info);
 	GtkTreeIter row;
@@ -88,19 +94,14 @@ int update_intervals(gpointer udata) {
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
 
-	if(max_ratio >= 1) {
-		if(this->alarmed == FALSE) {
-			this->alarmed = TRUE;
-			gtk_window_set_icon_name(this->top,"gtk-no");
-			gtk_window_set_default_icon_name("gtk-no");
-		}
-	} else {
-		if(this->alarmed == TRUE) {
-			this->alarmed = FALSE;
-			gtk_window_set_default_icon_name("gtk-yes");
-			gtk_window_set_icon_name(this->top,"gtk-yes");
-		}
-	}
+	start_updating_icon(this);
+	GdkPixbuf* icon = gdk_pixbuf_get_from_surface(this->cairo_surface,
+																								0,0,
+																								64,64);
+	
+	gtk_window_set_icon_name(this->top,icon); 
+	gtk_window_set_default_icon_name(icon);
+	// g_unref(icon) ?
 
 	// take off expired this->items at the end
 	if(has_row) {

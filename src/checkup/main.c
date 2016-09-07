@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
 		alarmed: FALSE
 	};
 
+	update_init(&update_info);
+
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);
 	}
