@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 #define DEFW(name) GtkWidget* name = GETW(#name)
 	DEFW(top);
 	gtk_window_set_icon_name(GTK_WINDOW(top),"gtk-yes");
+	gtk_window_set_default_icon_name("gtk-yes");
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
 	GtkTreeSelection* selection = GTK_TREE_SELECTION(GET("selection"));
 	DEFW(didit);
@@ -48,7 +49,8 @@ int main(int argc, char *argv[])
 		items: items
 	};
 	struct update_info update_info = {
-		items: items
+		items: items,
+		top: GTK_WINDOW(top)
 	};
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {

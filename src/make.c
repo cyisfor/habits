@@ -81,12 +81,12 @@ void string_free(const char* s) {}
 void init_flags(void) {
 	cflags.length = 0;
 	cflags.items = NULL;
-	string_array_PUSH(cflags,"-g");
-//	string_array_PUSH(cflags,"-O2");
-	string_array_PUSH(cflags,"-fdiagnostics-color=always");
-	string_array_PUSH(cflags,"-I.");
-	string_array_PUSH(cflags,"-Isrc");
-	string_array_PUSH(cflags,"-Igen");
+	string_PUSH(cflags,"-g");
+//	string_PUSH(cflags,"-O2");
+	string_PUSH(cflags,"-fdiagnostics-color=always");
+	string_PUSH(cflags,"-I.");
+	string_PUSH(cflags,"-Isrc");
+	string_PUSH(cflags,"-Igen");
 	string_array_done_pushing(&cflags);
 
 	ldflags.length = 0;

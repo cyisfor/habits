@@ -5,6 +5,7 @@
 
 struct update_info {
 	GtkTreeModel* items;
+	GtkWindow* top;
 	guint updater;
 };
 

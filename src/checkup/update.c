@@ -39,12 +39,16 @@ int update_intervals(gpointer udata) {
 	struct db_habit habit;
 	GdkRGBA thingy;
 	bool odd = false;
+	double max_ratio = -1;
 	while(db_next(&habit)) {
 		const char* elapsed = "never";
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
 			double ratio = (habit.elapsed - habit.frequency) /
 				(double)habit.frequency;
+			if(ratio > max_ratio) {
+				max_ratio = ratio;
+			}
 			color_for(&thingy, ratio);
 		}
 
@@ -83,6 +87,19 @@ int update_intervals(gpointer udata) {
 		}
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
+
+	if(max_ratio >= 1) {
+		if(this->alarmed == false) {
+			this->alarmed = true;
+			gtk_window_set_icon_name(this->top,"gtk-no");
+			gtk_window_set_default_icon_name("gtk-no");
+		}
+	} else if(this->alarmed) {
+		this->alarmed = false;
+		gtk_window_set_default_icon_name("gtk-yes");
+		gtk_window_set_icon_name(this->top,"gtk-yes");
+	}
+
 	// take off expired this->items at the end
 	if(has_row) {
 		//has_row = gtk_tree_model_iter_next(this->items, &row);
