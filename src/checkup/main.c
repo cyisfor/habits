@@ -33,15 +33,11 @@ int main(int argc, char *argv[])
 	}
 	puts("\x1b]0;checkup\a");
 	fflush(stdout);
-	
+
 	gtk_init(&argc,&argv);
 	db_init();
 	notify_init("checkup");
 
-	GtkStatusIcon* icon = gtk_status_icon_new_from_icon_name("gtk-yes");
-	assert(icon);
-	gtk_status_icon_set_tooltip_text(icon, "Habits");
-	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
 #define GET(name) { GObject* o = gtk_builder_get_object(b, name); assert(o != NULL); o; }
@@ -50,6 +46,11 @@ int main(int argc, char *argv[])
 	DEFW(top);
 	gtk_window_set_icon_name(GTK_WINDOW(top),"gtk-yes");
 	gtk_window_set_default_icon_name("gtk-yes");
+
+	DEFW(status);
+	DEFW(status_menu);
+	GtkMenuItem* quit_item = GTK_MENU_ITEM(GET(quit));
+
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
 	GtkTreeSelection* selection = GTK_TREE_SELECTION(GET("selection"));
 	DEFW(didit);
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
 	}
 
 	g_signal_connect(didit, "clicked",G_CALLBACK(on_didit), NULL);
-	
+
 	g_signal_connect(disabled,"toggled",G_CALLBACK(disabled_toggled), items);
 
 	void start() {
@@ -129,7 +130,23 @@ int main(int argc, char *argv[])
 	}
 
 	g_signal_connect(top,"delete-event",G_CALLBACK(toggle_shown), NULL);
-	g_signal_connect(icon, "activate", G_CALLBACK(toggle_shown), NULL);
+	g_signal_connect(status, "activate", G_CALLBACK(toggle_shown), NULL);
+
+	void icon_offer_quit(GtkStatusIcon *status_icon,
+											 guint          button,
+											 guint          activate_time,
+											 gpointer       user_data) {
+		gtk_menu_popup(status_menu, NULL, NULL,
+									 gtk_status_icon_position_menu, icon,
+									 button, activate_time);
+	}
+	g_signal_connect(status, "popup-menu", G_CALLBACK(icon_offer_quit), NULL);
+	void maybe_quit() {
+		if(gtk_menu_shell_get_selected_item(status_menu) == quit_item)
+			gtk_main_quit();
+	}
+	g_signal_connect(status_menu, "selection-done",
+									 G_CALLBACK(maybe_quit), NULL);
 
 	struct new_habit_info* new_habit = new_habit_init();
 	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),new_habit);
