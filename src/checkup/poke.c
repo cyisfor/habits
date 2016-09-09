@@ -22,8 +22,7 @@ static void on_notify_closed(NotifyNotification* n, gpointer udata) {
 	}
 }
 
-static int poke_me(gpointer udata) {
-	DEFINE_THIS(struct poke_info);
+const char* get_message(struct poke_info* this) {
 	GtkTreeIter iter;
 	if(FALSE == gtk_tree_model_get_iter_first(this->items, &iter))
 		return G_SOURCE_CONTINUE;
@@ -52,6 +51,12 @@ static int poke_me(gpointer udata) {
 													 &ident);
 	const char* message = g_value_get_string(&label);
 	gtk_status_icon_set_tooltip_text(this->icon, message);
+	return message;
+}
+
+static int poke_me(gpointer udata) {
+	DEFINE_THIS(struct poke_info);
+	char* message = get_message(this);
 	NotifyNotification* n = notify_notification_new
 		("",
 		 message,
@@ -67,6 +72,7 @@ static int poke_me(gpointer udata) {
 void poke_start(struct poke_info* this) {
 	if(this->poker==0)
 		this->poker = g_timeout_add_seconds(600, poke_me, this);
+	get_message(this);
 }
 
 void poke_stop(struct poke_info* this) {

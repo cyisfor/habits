@@ -47,9 +47,9 @@ int main(int argc, char *argv[])
 	gtk_window_set_icon_name(GTK_WINDOW(top),"gtk-yes");
 	gtk_window_set_default_icon_name("gtk-yes");
 
-	DEFW(status);
-	DEFW(status_menu);
-	GtkMenuItem* quit_item = GTK_MENU_ITEM(GET(quit));
+	GtkStatusIcon* status = GTK_STATUS_ICON(GET("status"));
+	GtkMenu* status_menu = GTK_MENU(GET("status_menu"));
+	GtkMenuItem* quit_item = GTK_MENU_ITEM(GET("quit"));
 
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
 	GtkTreeSelection* selection = GTK_TREE_SELECTION(GET("selection"));
@@ -62,11 +62,11 @@ int main(int argc, char *argv[])
 	gtk_window_stick(GTK_WINDOW(top));
 
 	struct poke_info poke_info = {
-		icon: icon,
+		icon: status,
 		items: items
 	};
 	struct update_info update_info = {
-		icon: icon,
+		icon: status,
 		items: items,
 		top: GTK_WINDOW(top),
 	};
@@ -137,16 +137,12 @@ int main(int argc, char *argv[])
 											 guint          activate_time,
 											 gpointer       user_data) {
 		gtk_menu_popup(status_menu, NULL, NULL,
-									 gtk_status_icon_position_menu, icon,
+									 gtk_status_icon_position_menu, status,
 									 button, activate_time);
 	}
 	g_signal_connect(status, "popup-menu", G_CALLBACK(icon_offer_quit), NULL);
-	void maybe_quit() {
-		if(gtk_menu_shell_get_selected_item(status_menu) == quit_item)
-			gtk_main_quit();
-	}
-	g_signal_connect(status_menu, "selection-done",
-									 G_CALLBACK(maybe_quit), NULL);
+
+	g_signal_connect(quit_item, "activate",gtk_main_quit,NULL);
 
 	struct new_habit_info* new_habit = new_habit_init();
 	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),new_habit);
