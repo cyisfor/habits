@@ -5,19 +5,20 @@
 #include "checkup_glade.h"
 #include "litlen.h"
 
+#include <glib.h>
+#define GDK_VERSION_MIN_REQUIRED (G_ENCODE_VERSION(3,12))
+
+#include <gtk/gtk.h>
+
+#include <libnotify/notify.h>
+
 #include "poke.h"
 #include "update.h"
 #include "disabled.h"
 #include "search.h"
 #include "prettify.h"
 
-#include <glib.h>
-#include <gtk/gtk.h>
 
-#include <libnotify/notify.h>
-
-#define GDK_DISABLE_DEPRECATED_WARNINGS
-#include <gtk/deprecated/statusicon.h>
 
 #include <assert.h>
 #include <error.h>
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
 
 	GtkStatusIcon* icon = gtk_status_icon_new_from_icon_name("gtk-yes");
 	assert(icon);
+	gtk_status_icon_set_tooltip_text(icon, "Habits");
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
@@ -59,6 +61,7 @@ int main(int argc, char *argv[])
 	gtk_window_stick(GTK_WINDOW(top));
 
 	struct poke_info poke_info = {
+		icon: icon,
 		items: items
 	};
 	struct update_info update_info = {
@@ -121,6 +124,7 @@ int main(int argc, char *argv[])
 			shown = false;
 		} else {
 			gtk_widget_show_all(top);
+			shown = true;
 		}
 	}
 

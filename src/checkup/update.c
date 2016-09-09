@@ -1,3 +1,5 @@
+#include <glib.h>
+#define GDK_VERSION_MIN_REQUIRED (G_ENCODE_VERSION(3,12))
 #include "update.h"
 
 #include "readable_interval.h"

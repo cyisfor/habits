@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 
 struct poke_info {
+	GtkStatusIcon* icon;
 	GtkTreeModel* items;
 	guint poker;
 };

@@ -1,3 +1,6 @@
+#include <glib.h>
+#define GDK_VERSION_MIN_REQUIRED (G_ENCODE_VERSION(3,12))
+
 #include "poke.h"
 #include "define_this.h"
 
@@ -47,9 +50,11 @@ static int poke_me(gpointer udata) {
 													 &iter,
 													 1,
 													 &ident);
+	const char* message = g_value_get_string(&label);
+	gtk_status_icon_set_tooltip_text(this->icon, message);
 	NotifyNotification* n = notify_notification_new
 		("",
-		 g_value_get_string(&label),
+		 message,
 		 "task-due");
 	g_signal_connect(n, "closed", G_CALLBACK(on_notify_closed), this);
 	GError* err = NULL;
