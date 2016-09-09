@@ -109,7 +109,8 @@ int update_intervals(gpointer udata) {
 	cairo_surface_destroy(surface);
 	gtk_window_set_icon(this->top,icon); 
 	gtk_window_set_default_icon(icon);
-*/
+	gtk_status_icon_set_from_pixbuf(this->icon, icon);
+
 	// XXX: g_unref(icon) ?
 
 	// take off expired this->items at the end

@@ -2,8 +2,11 @@
 #define UPDATE_H
 
 #include <gtk/gtk.h>
+#define GDK_DISABLE_DEPRECATED_WARNINGS
+#include <gtk/deprecated/statusicon.h>
 
 struct update_info {
+	GtkStatusIcon* icon;
 	GtkTreeModel* items;
 	GtkWindow* top;
 	guint updater;

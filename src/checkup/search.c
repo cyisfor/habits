@@ -20,7 +20,7 @@ static void search_later(GtkEntry* e, void* udata) {
 
 static void switch_to_search(GtkButton* btn, void* udata) {
 	DEFINE_THIS(struct search_info);
-	gtk_widget_hide(this->mainbox);
+	//gtk_widget_hide(this->mainbox);
 	gtk_widget_show_all(this->box);
 	if(this->entry_changer == 0)
 		this->entry_changer =
@@ -36,7 +36,7 @@ static void switch_to_main(GtkButton* btn, void* udata) {
 		this->entry_changer = 0;
 	}
 	gtk_widget_hide(this->box);
-	gtk_widget_show_all(this->mainbox);
+	//gtk_widget_show_all(this->mainbox);
 	db_stop_searching();
 	update_intervals(this->update);
 }

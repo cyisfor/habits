@@ -13,18 +13,32 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+
 #include <libnotify/notify.h>
+
+#define GDK_DISABLE_DEPRECATED_WARNINGS
+#include <gtk/deprecated/statusicon.h>
+
 #include <assert.h>
 #include <error.h>
 
 int main(int argc, char *argv[])
 {
+	if(getenv("ferrets") == NULL) {
+		setenv("ferrets","1",1);
+		setenv("name","habits",0);
+		execlp("daemonize","daemonize",argv[0],NULL);
+		abort();
+	}
 	puts("\x1b]0;checkup\a");
 	fflush(stdout);
+	
 	gtk_init(&argc,&argv);
 	db_init();
-	new_habit_init();
 	notify_init("checkup");
+
+	GtkStatusIcon* icon = gtk_status_icon_new_from_icon_name("gtk-yes");
+	assert(icon);
 	
 	GtkBuilder* b = gtk_builder_new_from_string(checkup_glade,
 																							checkup_glade_length);
@@ -43,18 +57,15 @@ int main(int argc, char *argv[])
 	DEFW(open_new);
 
 	gtk_window_stick(GTK_WINDOW(top));
-	g_signal_connect(top,"destroy",gtk_main_quit, NULL);
 
 	struct poke_info poke_info = {
 		items: items
 	};
 	struct update_info update_info = {
+		icon: icon,
 		items: items,
 		top: GTK_WINDOW(top),
-		alarmed: FALSE
 	};
-
-	update_init(&update_info);
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);
@@ -103,7 +114,18 @@ int main(int argc, char *argv[])
 	g_signal_connect(update, "toggled", on_update_toggled, NULL);
 
 	prettify(top);
-	gtk_widget_show_all(top);
+	bool shown = false;
+	void toggle_shown(void) {
+		if(shown) {
+			gtk_widget_hide(top);
+			shown = false;
+		} else {
+			gtk_widget_show_all(top);
+		}
+	}
+
+	g_signal_connect(top,"delete-event",G_CALLBACK(toggle_shown), NULL);
+	g_signal_connect(icon, "activate", G_CALLBACK(toggle_shown), NULL);
 
 	struct new_habit_info* new_habit = new_habit_init();
 	g_signal_connect(open_new,"clicked",G_CALLBACK(new_habit_show),new_habit);
