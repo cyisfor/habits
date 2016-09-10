@@ -3,6 +3,7 @@
 #include "db.h"
 
 #include <gtk/gtk.h>
+#include <assert.h>
 	
 gboolean search_for_stuff(void* udata) {
 	DEFINE_THIS(struct search_info);
@@ -20,7 +21,7 @@ static void search_later(GtkEntry* e, void* udata) {
 
 static void toggle_search(GtkButton* btn, void* udata) {
 	DEFINE_THIS(struct search_info);
-	if(this->shown) {
+	if(this->shown == TRUE) {
 		this->shown = FALSE;
 		if(this->searcher) g_source_remove(this->searcher);
 		if(this->entry_changer) {
@@ -47,5 +48,6 @@ static void toggle_search(GtkButton* btn, void* udata) {
 
 void search_init(struct search_info* this) {
 	this->shown = FALSE;
+	assert(this->update != NULL);
 	g_signal_connect(this->start,"clicked",G_CALLBACK(toggle_search),this);
 }

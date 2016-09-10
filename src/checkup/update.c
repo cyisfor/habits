@@ -22,9 +22,18 @@ static void color_for(GdkRGBA* dest, double ratio) {
 	} else if(ratio <= -1) {
 		g = 1;
 		r = 0;
+	} else if(ratio < 0) {
+		// between green and yellow
+		// r=-1, g = 1, r = 0
+		// r=0, g = 1, r = 1
+		g = 1;
+		r = ratio + 1;
 	} else {
-		g = -0.5 * (ratio - 1);
-		r = 0.5 * (ratio + 1);
+		// between yellow and red
+		// r=0 g = 1, r = 1
+		// r=1, g = 0, r = 1
+		g = 1 - ratio;
+		r = 1;
 	}
 	dest->red = r;
 	dest->green = g;
