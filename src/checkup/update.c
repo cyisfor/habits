@@ -11,6 +11,7 @@
 #include <gtk/gtk.h>
 #include <cairo.h>
 #include <math.h> // M_PI
+#include <assert.h>
 
 
 static void color_for(GdkRGBA* dest, double ratio) {
@@ -46,9 +47,12 @@ COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
+#define ICON_SIZE 8
+
+
 void update_init(struct update_info* this) {
 	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-																						 64,64);
+																						ICON_SIZE, ICON_SIZE);
 	// don't bother cairo_surface_destroy(surface);
 }
 
@@ -114,18 +118,24 @@ int update_intervals(gpointer udata) {
 											 thingy.red,
 											 thingy.green,
 											 thingy.blue);
-	cairo_arc(cairo,32,32,32,0,2*M_PI);
-	cairo_fill(cairo);
-	cairo_clip(cairo);
+	cairo_save(cairo);
 	GList* icons = NULL;
-	gint size = 64;
-	for(;size >= 16; size = size >> 1) {
-		icons = g_list_append(gdk_pixbuf_get_from_surface(this->surface,
+	gint size = ICON_SIZE;
+	for(;; size = size >> 1) {
+		printf("um %d\n",size);
+		icons = g_list_append(icons,
+													gdk_pixbuf_get_from_surface(this->surface,
 																											0,0,
 																											size,size));
+		cairo_restore(cairo);
+		cairo_arc(cairo,size>>1,size>>1,size>>1,0,2*M_PI);
 		cairo_scale(cairo, 0.5, 0.5);
+		cairo_fill(cairo);
+		cairo_clip(cairo);
+		if(size <= 16) break;
 	}
 	assert(icons != NULL);
+	cairo_destroy(cairo);
 	gtk_window_set_icon_list(this->top,icons); 
 	gtk_window_set_default_icon(icons->data);
 	gtk_status_icon_set_from_pixbuf(this->icon, icons->data);

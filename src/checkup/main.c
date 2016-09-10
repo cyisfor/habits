@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 		items: items,
 		top: GTK_WINDOW(top),
 	};
+	update_init(&update_info);
 
 	void interval_stringify(gchar** res, sqlite3_int64 interval) {
 		*res = g_strdup_printf("%ld",interval);

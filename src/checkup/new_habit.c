@@ -152,7 +152,7 @@ struct new_habit_info* new_habit_init(void) {
 }
 
 
-void new_habit_show(struct new_habit_info* this) {
+void new_habit_show(void* whatever, struct new_habit_info* this) {
 	gtk_entry_set_text(GTK_ENTRY(this->frequency),"86400");
 	update_readable_frequency(this);
 	gtk_entry_set_text(GTK_ENTRY(this->description),"");

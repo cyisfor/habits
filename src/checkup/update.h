@@ -2,14 +2,17 @@
 #define UPDATE_H
 
 #include <gtk/gtk.h>
+#include <cairo.h>
 
 struct update_info {
 	GtkStatusIcon* icon;
 	GtkTreeModel* items;
 	GtkWindow* top;
+	cairo_surface_t* surface;
 	guint updater;
 };
 
+void update_init(struct update_info* this);
 int update_intervals(void* udata);
 void update_start(struct update_info* this);
 void update_stop(struct update_info* this);
