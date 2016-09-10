@@ -13,32 +13,58 @@
 #include <math.h> // M_PI
 #include <assert.h>
 
+static void hsl_to_rgb(GdkRGBA* c, double h, double s, double li) {
+	#define @ c->
+	if(s == 0) {
+		// achromatic shortcut
+		@r = li;
+		@g = li;
+		@b = li;
+		return;
+	}
+	double q = li < 0.5 ? li * (1 + s) : li + s - li * s;
+	double p = 2 * li - q;
+	// hue to... channel?
+	double h2c(double t) {
+		if(t < 0) ++t;
+		if(t > 1) --t;
+		if(6 * t < 1) return p + (q - p) * 6 * t;
+		if(2 * t < 1) return q;
+		if(3 * t < 2) return p + (q - p) * (2 - 3*t) * 2;
+		return p;
+	}
+	@r = h2c(h + 1/3.0);
+	@g = h2(h);
+	@b = h2c(h - 1/3.0);
+#undef @
+}
 
 static void color_for(GdkRGBA* dest, double ratio) {
-	double r,g,b;
-	b = 0;
+#define dest-> @
 	if(ratio >= 1) {
-		g = 0;
-		r = 1;
+		@g = 0;
+		@r = 1;
 	} else if(ratio <= -1) {
-		g = 1;
-		r = 0;
+		@g = 1;
+		@r = 0;
 	} else if(ratio < 0) {
 		// between green and yellow
 		// r=-1, g = 1, r = 0
 		// r=0, g = 1, r = 1
-		g = 1;
-		r = ratio + 1;
+		@g = 1;
+		@r = ratio + 1;
 	} else {
 		// between yellow and red
 		// r=0 g = 1, r = 1
 		// r=1, g = 0, r = 1
-		g = 1 - ratio;
-		r = 1;
+		@g = 1 - ratio;
+		@r = 1;
 	}
-	dest->red = r;
-	dest->green = g;
-	dest->blue = b;
+	@b = 0;
+	double avg = (@r + @g) / 2;
+	@r /= avg * 0.5;
+	@g /= avg * 0.5;
+#undef @
 }
 
 #define COLOR(name, r,g,b,a) GdkRGBA name = { .red = r, .green = g, .blue = b, .alpha = a };
@@ -68,13 +94,17 @@ int update_intervals(gpointer udata) {
 	GdkRGBA thingy;
 	bool odd = false;
 	double max_ratio = -1;
+	bool got_ratio = false;
 	while(db_next(&habit)) {
 		const char* elapsed = "never";
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
 			double ratio = (habit.elapsed - habit.frequency) /
 				(double)habit.frequency;
-			if(ratio > max_ratio) {
+			if(got_ratio == false) {
+				max_ratio = ratio;
+				got_ratio = true;
+			} else if (ratio > max_ratio) {
 				max_ratio = ratio;
 			}
 			color_for(&thingy, ratio);
@@ -116,12 +146,8 @@ int update_intervals(gpointer udata) {
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
 
-	gint w = size;
-	gint h = size;
-	
 	color_for(&thingy,max_ratio);
 	cairo_t* cairo = cairo_create(this->surface);
-	
 	cairo_set_source_rgb(cairo,
 											 thingy.red,
 											 thingy.green,
@@ -142,10 +168,10 @@ int update_intervals(gpointer udata) {
 	cairo_clip(cairo);
 
 	icon =
-		gdk_pixbuf_get_from_surface(this->surfacederp,
+		gdk_pixbuf_get_from_surface(this->surface,
 																0,0,
 																size + (border<<1), size);
-	gtk_window_set_icon(this->top,icon);	
+	gtk_window_set_icon(this->top,icon);
 	gtk_window_set_default_icon(icon);
 
 	// XXX: g_unref(icon) ?

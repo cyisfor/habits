@@ -9,7 +9,6 @@ struct update_info {
 	GtkTreeModel* items;
 	GtkWindow* top;
 	cairo_surface_t* surface;
-	cairo_surface_t* surfacederp;
 	guint updater;
 };
 
