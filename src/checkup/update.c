@@ -46,6 +46,12 @@ COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
+void update_init(struct update_info* this) {
+	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+																						 64,64);
+	// don't bother cairo_surface_destroy(surface);
+}
+
 int update_intervals(gpointer udata) {
 	DEFINE_THIS(struct update_info);
 	GtkTreeIter row;
@@ -103,9 +109,7 @@ int update_intervals(gpointer udata) {
 	}
 
 	color_for(&thingy,max_ratio);
-	cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-																												64,64);
-	cairo_t* cairo = cairo_create(surface);
+	cairo_t* cairo = cairo_create(this->surface);
 	cairo_set_source_rgb(cairo,
 											 thingy.red,
 											 thingy.green,
@@ -113,14 +117,18 @@ int update_intervals(gpointer udata) {
 	cairo_arc(cairo,32,32,32,0,2*M_PI);
 	cairo_fill(cairo);
 	cairo_clip(cairo);
-	cairo_destroy(cairo);
-	GdkPixbuf* icon = gdk_pixbuf_get_from_surface(surface,
-																								0,0,
-																								64,64);
-	cairo_surface_destroy(surface);
-	gtk_window_set_icon(this->top,icon); 
-	gtk_window_set_default_icon(icon);
-	gtk_status_icon_set_from_pixbuf(this->icon, icon);
+	GList* icons = NULL;
+	gint size = 64;
+	for(;size >= 16; size = size >> 1) {
+		icons = g_list_append(gdk_pixbuf_get_from_surface(this->surface,
+																											0,0,
+																											size,size));
+		cairo_scale(cairo, 0.5, 0.5);
+	}
+	assert(icons != NULL);
+	gtk_window_set_icon_list(this->top,icons); 
+	gtk_window_set_default_icon(icons->data);
+	gtk_status_icon_set_from_pixbuf(this->icon, icons->data);
 
 	// XXX: g_unref(icon) ?
 

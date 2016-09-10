@@ -94,7 +94,7 @@ static gboolean do_create(GtkButton* btn, void* udata) {
 		 created ?
 		 "created" : "updated",
 		 gtk_entry_get_text(GTK_ENTRY(this->description)));
-	g_signal_connect(dialog,"response",G_CALLBACK(gtk_widget_destroy),dialog);
+	g_signal_connect(dialog,"response",G_CALLBACK(gtk_widget_destroy),NULL);
 	gtk_widget_show_all(dialog);
 	gtk_widget_hide(this->top);
 }
