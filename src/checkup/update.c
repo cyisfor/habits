@@ -47,12 +47,15 @@ COLOR(black,0,0,0,0);
 COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
-#define ICON_SIZE 64
+const gint size = 64;
 
 
 void update_init(struct update_info* this) {
 	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-																						ICON_SIZE, ICON_SIZE);
+																						size, size);
+	// stupid window managers...
+	this->surfacederp = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+																								 size, size>>1);
 	// don't bother cairo_surface_destroy(surface);
 }
 
@@ -112,35 +115,39 @@ int update_intervals(gpointer udata) {
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
 
+	gint w = size;
+	gint h = size;
+	
 	color_for(&thingy,max_ratio);
 	cairo_t* cairo = cairo_create(this->surface);
+	
 	cairo_set_source_rgb(cairo,
 											 thingy.red,
 											 thingy.green,
 											 thingy.blue);
-	cairo_save(cairo);
-	gint size = ICON_SIZE;
-	void doarc(gint size) {
-		cairo_restore(cairo);
-		cairo_arc(cairo,size>>1,size>>1,size>>1,0,2*M_PI);
-		cairo_fill(cairo);
-		cairo_clip(cairo);
-	}
-	doarc(ICON_SIZE);
-	GtkPixbuf* icon() {
-		return gdk_pixbuf_get_from_surface(this->surface,
-																			 0,0,
-																			 size,size);
-	}
-	gtk_status_icon_set_from_pixbuf
-		(this->icon,icon());
-	cairo_scale(cairo,1,2);
+	cairo_arc(cairo,size>>1,size>>1,size>>1,0,2*M_PI);
+	cairo_fill(cairo);
+	cairo_clip(cairo);
 
-	void derp(GdkPixbuf* icon) {
-		gtk_window_set_icon(this->top,icon);	
-		gtk_window_set_default_icon(icon);
-	}
-	derp(icon());
+	GdkPixbuf* icon =
+		gdk_pixbuf_get_from_surface(this->surface,
+																0,0,
+																size,size);
+	gtk_status_icon_set_from_pixbuf(this->icon,icon);
+	cairo_destroy(cairo);
+
+	cairo = cairo_create(this->surfacederp);
+
+	cairo_arc(cairo,size>>2,size>>1,size>>1,0,2*M_PI);
+	cairo_fill(cairo);
+	cairo_clip(cairo);
+
+	icon =
+		gdk_pixbuf_get_from_surface(this->surfacederp,
+																0,0,
+																size,size>>1);
+	gtk_window_set_icon(this->top,icon);	
+	gtk_window_set_default_icon(icon);
 
 	// XXX: g_unref(icon) ?
 
