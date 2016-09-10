@@ -48,14 +48,15 @@ COLOR(grey,0.95,0.95,0.95,1.0);
 COLOR(white,1,1,1,1);
 
 const gint size = 64;
-
+const gint border = 12;
 
 void update_init(struct update_info* this) {
+	/* stupid window managers... alt-tab thing stupidly clips off the edges,
+		 unless it's small enough. Then it scales it up and THEN clips off the
+		 edges -_- so, need a border no matter what.
+	*/
 	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-																						size, size);
-	// stupid window managers...
-	this->surfacederp = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-																								 size, size>>1);
+																						 size + (border<<1), size);
 	// don't bother cairo_surface_destroy(surface);
 }
 
@@ -134,18 +135,16 @@ int update_intervals(gpointer udata) {
 																0,0,
 																size,size);
 	gtk_status_icon_set_from_pixbuf(this->icon,icon);
-	cairo_destroy(cairo);
 
-	cairo = cairo_create(this->surfacederp);
-
-	cairo_arc(cairo,size>>2,size>>1,size>>1,0,2*M_PI);
+	// now offset it, so we can use the border
+	cairo_arc(cairo,(size>>1) + border,size>>1,size>>1,0,2*M_PI);
 	cairo_fill(cairo);
 	cairo_clip(cairo);
 
 	icon =
 		gdk_pixbuf_get_from_surface(this->surfacederp,
 																0,0,
-																size,size>>1);
+																size + (border<<1), size);
 	gtk_window_set_icon(this->top,icon);	
 	gtk_window_set_default_icon(icon);
 
