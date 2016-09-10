@@ -13,13 +13,12 @@
 #include <math.h> // M_PI
 #include <assert.h>
 
-static void hsl_to_rgb(GdkRGBA* c, double h, double s, double li) {
-	#define @ c->
+static void hsl_to_rgb(GdkRGBA* dest, double h, double s, double li) {
 	if(s == 0) {
 		// achromatic shortcut
-		@r = li;
-		@g = li;
-		@b = li;
+		dest->red = li;
+		dest->green = li;
+		dest->blue = li;
 		return;
 	}
 	double q = li < 0.5 ? li * (1 + s) : li + s - li * s;
@@ -33,38 +32,37 @@ static void hsl_to_rgb(GdkRGBA* c, double h, double s, double li) {
 		if(3 * t < 2) return p + (q - p) * (2 - 3*t) * 2;
 		return p;
 	}
-	@r = h2c(h + 1/3.0);
-	@g = h2(h);
-	@b = h2c(h - 1/3.0);
-#undef @
+	dest->red = h2c(h + 1/3.0);
+	dest->green = h2c(h);
+	dest->blue = h2c(h - 1/3.0);
 }
 
 static void color_for(GdkRGBA* dest, double ratio) {
-#define dest-> @
+#define L 0.4
 	if(ratio >= 1) {
-		@g = 0;
-		@r = 1;
+		dest->green = 0;
+		dest->red = L;
 	} else if(ratio <= -1) {
-		@g = 1;
-		@r = 0;
+		dest->green = L;
+		dest->red = 0;
 	} else if(ratio < 0) {
 		// between green and yellow
 		// r=-1, g = 1, r = 0
 		// r=0, g = 1, r = 1
-		@g = 1;
-		@r = ratio + 1;
+		dest->green = L;
+		dest->red = (ratio + 1)*L;
 	} else {
 		// between yellow and red
 		// r=0 g = 1, r = 1
 		// r=1, g = 0, r = 1
-		@g = 1 - ratio;
-		@r = 1;
+		dest->green = L*(1 - ratio);
+		dest->red = L;
 	}
-	@b = 0;
-	double avg = (@r + @g) / 2;
-	@r /= avg * 0.5;
-	@g /= avg * 0.5;
-#undef @
+	dest->blue = 0;
+	double avg = (dest->red + dest->green) / 2;
+	printf("average %lf\n",avg);
+	dest->red *= avg;
+	dest->green *= avg;
 }
 
 #define COLOR(name, r,g,b,a) GdkRGBA name = { .red = r, .green = g, .blue = b, .alpha = a };
