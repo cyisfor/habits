@@ -18,31 +18,32 @@ static void search_later(GtkEntry* e, void* udata) {
 	this->searcher = g_timeout_add(100,search_for_stuff,this);
 }
 
-static void switch_to_search(GtkButton* btn, void* udata) {
+static void toggle_search(GtkButton* btn, void* udata) {
 	DEFINE_THIS(struct search_info);
-	//gtk_widget_hide(this->mainbox);
-	gtk_widget_show_all(this->box);
-	if(this->entry_changer == 0)
-		this->entry_changer =
-			g_signal_connect(this->entry,"changed",G_CALLBACK(search_later),this);
-	search_for_stuff(this);
-}
-
-static void switch_to_main(GtkButton* btn, void* udata) {
-	DEFINE_THIS(struct search_info);
-	if(this->searcher) g_source_remove(this->searcher);
-	if(this->entry_changer) {
-		g_signal_handler_disconnect(this->entry, this->entry_changer);
-		this->entry_changer = 0;
+	if(this->shown) {
+		this->shown = FALSE;
+		if(this->searcher) g_source_remove(this->searcher);
+		if(this->entry_changer) {
+			g_signal_handler_disconnect(this->entry, this->entry_changer);
+			this->entry_changer = 0;
+		}
+		gtk_widget_hide(this->box);
+		//gtk_widget_show_all(this->mainbox);
+		db_stop_searching();
+		gtk_image_set_from_icon_name(this->image, "gtk-find");
+		update_intervals(this->update);
+	} else {
+		this->shown = TRUE;
+		gtk_widget_show(this->box);
+		if(this->entry_changer == 0)
+			this->entry_changer =
+				g_signal_connect(this->entry,"changed",G_CALLBACK(search_later),this);
+		search_for_stuff(this);
+		gtk_image_set_from_icon_name(this->image, "gtk-close");
 	}
-	gtk_widget_hide(this->box);
-	//gtk_widget_show_all(this->mainbox);
-	db_stop_searching();
-	update_intervals(this->update);
 }
 
-void search_init(struct search_info* this) {	
-	gtk_widget_hide(this->box);
-	g_signal_connect(this->start,"clicked",G_CALLBACK(switch_to_search),this);
-	g_signal_connect(this->done,"clicked",G_CALLBACK(switch_to_main),this);
+void search_init(struct search_info* this) {
+	gtk_widget_set_no_show_all(this->box, TRUE);
+	g_signal_connect(this->start,"clicked",G_CALLBACK(toggle_search),this);
 }

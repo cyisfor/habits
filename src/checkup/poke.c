@@ -25,7 +25,7 @@ static void on_notify_closed(NotifyNotification* n, gpointer udata) {
 const char* get_message(struct poke_info* this) {
 	GtkTreeIter iter;
 	if(FALSE == gtk_tree_model_get_iter_first(this->items, &iter))
-		return G_SOURCE_CONTINUE;
+		return NULL;
 	int cutoff = 2;
 	long rando = random();
 	for(;;) {
@@ -56,7 +56,9 @@ const char* get_message(struct poke_info* this) {
 
 static int poke_me(gpointer udata) {
 	DEFINE_THIS(struct poke_info);
-	char* message = get_message(this);
+	const char* message = get_message(this);
+	if(message == NULL)
+		return G_SOURCE_CONTINUE;
 	NotifyNotification* n = notify_notification_new
 		("",
 		 message,

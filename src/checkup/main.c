@@ -119,18 +119,27 @@ int main(int argc, char *argv[])
 
 	prettify(top);
 	bool shown = false;
-	void toggle_shown(void) {
+	bool above = false;
+	void show_or_raise(void) {
+		//printf("aboves %d %d\n",shown,above);
 		if(shown) {
-			gtk_widget_hide(top);
-			shown = false;
+			if(above) {
+				gtk_widget_hide(top);
+				shown = false;
+				above = false;
+			} else {
+				gtk_window_set_keep_above(GTK_WINDOW(top),TRUE);
+				gtk_window_present(GTK_WINDOW(top));
+				above = true;
+			}
 		} else {
-			gtk_widget_show_all(top);
+			gtk_widget_show(top);
 			shown = true;
 		}
 	}
 
-	g_signal_connect(top,"delete-event",G_CALLBACK(toggle_shown), NULL);
-	g_signal_connect(status, "activate", G_CALLBACK(toggle_shown), NULL);
+	g_signal_connect(top,"delete-event",G_CALLBACK(gtk_widget_hide), top);
+	g_signal_connect(status, "activate", G_CALLBACK(show_or_raise), NULL);
 
 	void icon_offer_quit(GtkStatusIcon *status_icon,
 											 guint          button,
