@@ -158,10 +158,8 @@ int main(int argc, char *argv[])
 
 	struct search_info search_info = {
 		entry: GTK_ENTRY(GET("search")),
-		box: GETW("searchbox"),
-		mainbox: GETW("mainbox"),
+		image: GTK_IMAGE(GET("search_image")),
 		start: GETW("search_start"),
-		done: GETW("search_done"),
 		update: &update_info
 	};
 	search_init(&search_info);

@@ -2,13 +2,12 @@
 
 struct search_info {
 	GtkEntry* entry;
-	GtkWidget* box;
-	GtkWidget* mainbox;
+	GtkImage* image;
 	GtkWidget* start;
-	GtkWidget* done;
 	struct update_info* update;
 	guint entry_changer;
 	guint searcher;
+	gboolean shown;
 };
 
 void search_init(struct search_info* this);
