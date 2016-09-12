@@ -2,3 +2,6 @@
 	path = data_to_header_string
 	url = https://github.com/cyisfor/data_to_header_string
 	ignore = untracked
+[submodule "template"]
+	path = template
+	url = https://github.com/cyisfor/c-template
