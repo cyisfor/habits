@@ -38,7 +38,7 @@ static void hsl_to_rgb(GdkRGBA* dest, double h, double s, double li) {
 }
 
 static void color_for(GdkRGBA* dest, double ratio) {
-#define L 0.4
+#define L 0.8
 	if(ratio >= 1) {
 		dest->green = 0;
 		dest->red = L;
@@ -59,10 +59,6 @@ static void color_for(GdkRGBA* dest, double ratio) {
 		dest->red = L;
 	}
 	dest->blue = 0;
-	double avg = (dest->red + dest->green) / 2;
-	printf("average %lf\n",avg);
-	dest->red *= avg;
-	dest->green *= avg;
 }
 
 #define COLOR(name, r,g,b,a) GdkRGBA name = { .red = r, .green = g, .blue = b, .alpha = a };
