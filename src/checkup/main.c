@@ -125,12 +125,7 @@ int main(int argc, char *argv[])
 
 	prettify(top);
 	bool shown = false;
-	bool above = false;
 	gboolean hide(GtkWidget* widget, GdkEvent* event, gpointer udata) {
-		if(above) {
-			gtk_window_set_keep_above(GTK_WINDOW(top),FALSE);
-			above = false;
-		}
 		if(shown) {
 			gtk_widget_hide(top);
 			shown = false;
@@ -155,23 +150,18 @@ int main(int argc, char *argv[])
 		double now = getnow();
 		printf("focused ? %d %lf\n",focused,now-last_focused);
 		if(shown) {
-			if(above || focused || 
-				 /* last clicked more than 2 seconds ago */
-				 (now - last_status_clicked < 2)) {
-				gtk_widget_hide(top);
-				shown = false;
-				above = false;
-			} else if(/*!above && */
-				 (
+			if(
 					/* we lost the focus, and it's been a while
 						 since we lost it */
 					!focused &&
-					(now - last_focused > 2))) {
+					(now - last_focused > 5)) {
+				puts("lost the focus");
 				gtk_window_present(GTK_WINDOW(top));
 			} else {
-				gtk_window_set_keep_above(GTK_WINDOW(top),TRUE);
-				gtk_window_present(GTK_WINDOW(top));
-				above = true;
+				puts("focused or recently unfocused");
+				gtk_widget_hide(top);
+				shown = false;
+				above = false;
 			}
 		} else {
 			gtk_widget_show(top);
