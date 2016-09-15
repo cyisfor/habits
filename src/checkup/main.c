@@ -18,7 +18,11 @@
 #include "search.h"
 #include "prettify.h"
 
-
+double getnow() {
+	struct timespec spec;
+	clock_gettime(CLOCK_MONOTONIC,&spec);
+	return spec.tv_sec + spec.tv_nsec / 1000000000.0L;
+}
 
 #include <assert.h>
 #include <error.h>
@@ -49,7 +53,7 @@ int main(int argc, char *argv[])
 
 	GtkStatusIcon* status = GTK_STATUS_ICON(GET("status"));
 	GtkMenu* status_menu = GTK_MENU(GET("status_menu"));
-	clock_t last_status_clicked = clock();
+	double last_status_clicked = getnow();
 	GtkMenuItem* quit_item = GTK_MENU_ITEM(GET("quit"));
 
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
@@ -133,13 +137,27 @@ int main(int argc, char *argv[])
 		}
 		return TRUE;
 	}
+	double last_focused = getnow();
+	bool focused = true;
+	void focus(void) {
+		focused = true;
+//		last_focused = getnow();
+	}
+	void unfocus(void) {
+		focused = false;
+		last_focused = getnow();
+	}
 	void show_or_raise(void) {
 		//printf("aboves %d %d\n",shown,above);
-		clock_t now = clock();
-		printf("um diff %d - %d = %d\n",now,last_status_clicked,
-					 now-last_status_clicked);
+		double now = getnow();
 		if(shown) {
-			if(above || (now - last_status_clicked) < 10) {
+			if(above ||
+				 /* last clicked more than 2 seconds ago */
+				 (now - last_status_clicked < 2) ||
+				 /* either we have the focus, or it's been a while
+						since we lost it */
+				 focused ||
+				 (now - last_focused > 2)) {
 				gtk_widget_hide(top);
 				shown = false;
 				above = false;
