@@ -152,23 +152,22 @@ int main(int argc, char *argv[])
 	g_signal_connect(top,"focus-in-event",G_CALLBACK(focus), NULL);
 	g_signal_connect(top,"focus-out-event",G_CALLBACK(unfocus), NULL);
 	void show_or_raise(void) {
-		printf("focused ? %d %lf\n",focused,last_focused);
 		double now = getnow();
+		printf("focused ? %d %lf\n",focused,now-last_focused);
 		if(shown) {
-			if(!above &&
-				 (
-					/* either we have the focus, or it's been a while
-						 since we lost it */
-					
-					focused ||
-					(now - last_focused > 2))) {
-				gtk_window_present(GTK_WINDOW(top));
-			} else if(above ||
+			if(above || focused || 
 				 /* last clicked more than 2 seconds ago */
 				 (now - last_status_clicked < 2)) {
 				gtk_widget_hide(top);
 				shown = false;
 				above = false;
+			} else if(/*!above && */
+				 (
+					/* we lost the focus, and it's been a while
+						 since we lost it */
+					!focused &&
+					(now - last_focused > 2))) {
+				gtk_window_present(GTK_WINDOW(top));
 			} else {
 				gtk_window_set_keep_above(GTK_WINDOW(top),TRUE);
 				gtk_window_present(GTK_WINDOW(top));
