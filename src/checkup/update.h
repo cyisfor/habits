@@ -10,6 +10,7 @@ struct update_info {
 	GtkWindow* top;
 	cairo_surface_t* surface;
 	guint updater;
+	gint last_ratio;
 };
 
 void update_init(struct update_info* this);

@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
 
 	GtkStatusIcon* status = GTK_STATUS_ICON(GET("status"));
 	GtkMenu* status_menu = GTK_MENU(GET("status_menu"));
+	clock_t last_status_clicked = clock();
 	GtkMenuItem* quit_item = GTK_MENU_ITEM(GET("quit"));
 
 	GtkTreeModel* items = GTK_TREE_MODEL(GET("items"));
@@ -134,8 +135,11 @@ int main(int argc, char *argv[])
 	}
 	void show_or_raise(void) {
 		//printf("aboves %d %d\n",shown,above);
+		clock_t now = clock();
+		printf("um diff %d - %d = %d\n",now,last_status_clicked,
+					 now-last_status_clicked);
 		if(shown) {
-			if(above) {
+			if(above || (now - last_status_clicked) < 10) {
 				gtk_widget_hide(top);
 				shown = false;
 				above = false;
@@ -148,6 +152,7 @@ int main(int argc, char *argv[])
 			gtk_widget_show(top);
 			shown = true;
 		}
+		last_status_clicked = now;
 	}
 
 	g_signal_connect(top,"delete-event",G_CALLBACK(hide), NULL);

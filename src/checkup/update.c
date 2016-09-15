@@ -37,12 +37,14 @@ static void hsl_to_rgb(GdkRGBA* dest, double h, double s, double li) {
 	dest->blue = h2c(h - 1/3.0);
 }
 
-static void color_for(GdkRGBA* dest, double ratio) {
+#define QUANTUM 100
+
+static void color_for(GdkRGBA* dest, int ratio) {
 #define L 0.8
-	if(ratio >= 1) {
+	if(ratio >= QUANTUM) {
 		dest->green = 0;
 		dest->red = L;
-	} else if(ratio <= -1) {
+	} else if(ratio <= -QUANTUM) {
 		dest->green = L;
 		dest->red = 0;
 	} else if(ratio < 0) {
@@ -50,12 +52,12 @@ static void color_for(GdkRGBA* dest, double ratio) {
 		// r=-1, g = 1, r = 0
 		// r=0, g = 1, r = 1
 		dest->green = L;
-		dest->red = (ratio + 1)*L;
+		dest->red = ((double)ratio/QUANTUM + 1)*L;
 	} else {
 		// between yellow and red
 		// r=0 g = 1, r = 1
 		// r=1, g = 0, r = 1
-		dest->green = L*(1 - ratio);
+		dest->green = L*(1 - (double)ratio/QUANTUM);
 		dest->red = L;
 	}
 	dest->blue = 0;
@@ -93,7 +95,7 @@ int update_intervals(gpointer udata) {
 		const char* elapsed = "never";
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
-			double ratio = (habit.elapsed - habit.frequency) /
+			int ratio = QUANTUM * (habit.elapsed - habit.frequency) /
 				(double)habit.frequency;
 			if(got_ratio == false) {
 				max_ratio = ratio;
@@ -140,33 +142,41 @@ int update_intervals(gpointer udata) {
 		has_row = gtk_tree_model_iter_next(this->items,&row);
 	}
 
-	color_for(&thingy,max_ratio);
-	cairo_t* cairo = cairo_create(this->surface);
-	cairo_set_source_rgb(cairo,
-											 thingy.red,
-											 thingy.green,
-											 thingy.blue);
-	cairo_arc(cairo,size>>1,size>>1,size>>1,0,2*M_PI);
-	cairo_fill(cairo);
-	cairo_clip(cairo);
+	// let's get quantum!
+	if(max_ratio != this->last_ratio) {
+		this->last_ratio = max_ratio;
+		printf("New icon at %d\n",max_ratio);
+		color_for(&thingy,max_ratio);
+		cairo_t* cairo = cairo_create(this->surface);
+		cairo_set_source_rgb(cairo,
+												 thingy.red,
+												 thingy.green,
+												 thingy.blue);
+		cairo_arc(cairo,size>>1,size>>1,size>>1,0,2*M_PI);
+		cairo_fill(cairo);
+		cairo_clip(cairo);
+		
+		GdkPixbuf* icon =
+			gdk_pixbuf_get_from_surface(this->surface,
+																	0,0,
+																	size,size);
+		gtk_status_icon_set_from_pixbuf(this->icon,icon);
 
-	GdkPixbuf* icon =
-		gdk_pixbuf_get_from_surface(this->surface,
-																0,0,
-																size,size);
-	gtk_status_icon_set_from_pixbuf(this->icon,icon);
-
-	// now offset it, so we can use the border
-	cairo_arc(cairo,(size>>1) + border,size>>1,size>>1,0,2*M_PI);
-	cairo_fill(cairo);
-	cairo_clip(cairo);
-
-	icon =
-		gdk_pixbuf_get_from_surface(this->surface,
-																0,0,
-																size + (border<<1), size);
-	gtk_window_set_icon(this->top,icon);
-	gtk_window_set_default_icon(icon);
+		// now offset it, so we can use the border
+		cairo_arc(cairo,(size>>1) + border,size>>1,size>>1,0,2*M_PI);
+		cairo_fill(cairo);
+		cairo_clip(cairo);
+		
+		icon =
+			gdk_pixbuf_get_from_surface(this->surface,
+																	0,0,
+																	size + (border<<1), size);
+		gtk_window_set_icon(this->top,icon);
+		gtk_window_set_default_icon(icon);
+		
+		cairo_destroy(cairo);
+		g_object_unref(icon);
+	}
 
 	// XXX: g_unref(icon) ?
 
