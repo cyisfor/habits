@@ -72,54 +72,55 @@ COLOR(white,1,1,1,1);
 const gint size = 64;
 const gint border = 12;
 
-static 
-  gint
-sort_func (GtkTreeModel *model,
-					 GtkTreeIter  *a,
-					 GtkTreeIter  *b,
-					 gpointer      userdata) {
-	Column sortid = GPOINTER_TO_INT(userdata);
-	switch(sortid) {
-	case NAME:
-		{ gchar aval[0x100], bval[0x100];
-			gtk_tree_model_get(model, a, NAME, &aval, -1);
-			gtk_tree_model_get(model, b, NAME, &bval, -1);
-			if(aval == NULL || bval == NULL) {
-				if(aval == NULL && bval == NULL) 
-					return 0;
-				if(bval == NULL) {
-					g_free(aval);
-					return -1;
-				} else {
-					g_free(bval);
-					return 1;
-				}
-			}
-			gint ret = g_utf8_collate(aval,bval);
+static gint
+compare_string (GtkTreeModel *model,
+								GtkTreeIter  *a,
+								GtkTreeIter  *b,
+								gpointer      userdata) {
+	gchar aval[0x100], bval[0x100];
+	gint column = GPOINTER_TO_INT(userdata);
+	gtk_tree_model_get(model, a, column, &aval, -1);
+	gtk_tree_model_get(model, b, column, &bval, -1);
+	if(aval == NULL || bval == NULL) {
+		if(aval == NULL && bval == NULL) 
+			return 0;
+		if(bval == NULL) {
 			g_free(aval);
+			return -1;
+		} else {
 			g_free(bval);
-			return ret;
+			return 1;
 		}
-	case ELAPSED:
-		{ gint aval, bval;
-			gtk_tree_model_get(model, a, ELAPSED_ORDER, &aval, -1);
-			gtk_tree_model_get(model, b, ELAPSED_ORDER, &bval, -1);
-			if(aval == bval)
-				return 0;
-			return aval < bval ? -1 : 1;
-		}
-	default:
-		abort();
-	};
-					
+	}
+	gint ret = g_utf8_collate(aval,bval);
+	g_free(aval);
+	g_free(bval);
+	return ret;
+}
+
+static gint
+compare_int (GtkTreeModel *model,
+						 GtkTreeIter  *a,
+						 GtkTreeIter  *b,
+						 gpointer      userdata) {
+	gint aval, bval;
+	gint column = GPOINTER_TO_INT(userdata);
+	gtk_tree_model_get(model, a, column, &aval, -1);
+	gtk_tree_model_get(model, b, column, &bval, -1);
+	if(aval == bval)
+		return 0;
+	return aval < bval ? -1 : 1;
 }
 	
 static void setup_sorting(GtkTreeSortable* sortable) {
 	Column sortid;
 	GtkSortType order;
-	gtk_tree_sortable_get_sort_column_id(sortable, &sortid, &order);
-	void checkone(Column column) {
-		
+	gtk_tree_sortable_set_sort_func(sortable, NAME,
+																	compare_string, NAME,
+																	NULL);
+	gtk_tree_sortable_set_sort_func(sortable, ELAPSED,
+																	compare_int, ELAPSED_ORDER,
+																	NULL);		
 }
 
 void update_init(struct update_info* this) {
@@ -129,7 +130,7 @@ void update_init(struct update_info* this) {
 	*/
 	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 																						 size + (border<<1), size);
-	// don't bother cairo_surface_destroy(surface);
+	setup_sorting(GTK_SORTABLE(this->items));
 }
 
 int update_intervals(gpointer udata) {
