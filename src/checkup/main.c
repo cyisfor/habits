@@ -134,34 +134,30 @@ int main(int argc, char *argv[])
 	}
 	double last_focused = getnow();
 	bool focused = true;
-	void focus(void) {
-		puts("focus");
+	gboolean focus(void) {
 		focused = true;
 //		last_focused = getnow();
+		return FALSE;
 	}
-	void unfocus(void) {
-		puts("unfocus");
+	gboolean unfocus(void) {
 		focused = false;
 		last_focused = getnow();
+		return FALSE;
 	}
 	g_signal_connect(top,"focus-in-event",G_CALLBACK(focus), NULL);
 	g_signal_connect(top,"focus-out-event",G_CALLBACK(unfocus), NULL);
 	void show_or_raise(void) {
 		double now = getnow();
-		printf("focused ? %d %lf\n",focused,now-last_focused);
 		if(shown) {
 			if(
 					/* we lost the focus, and it's been a while
 						 since we lost it */
 					!focused &&
-					(now - last_focused > 5)) {
-				puts("lost the focus");
+					(now - last_focused > 1)) {
 				gtk_window_present(GTK_WINDOW(top));
 			} else {
-				puts("focused or recently unfocused");
 				gtk_widget_hide(top);
 				shown = false;
-				above = false;
 			}
 		} else {
 			gtk_widget_show(top);

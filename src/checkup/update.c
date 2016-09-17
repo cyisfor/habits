@@ -72,6 +72,56 @@ COLOR(white,1,1,1,1);
 const gint size = 64;
 const gint border = 12;
 
+static 
+  gint
+sort_func (GtkTreeModel *model,
+					 GtkTreeIter  *a,
+					 GtkTreeIter  *b,
+					 gpointer      userdata) {
+	Column sortid = GPOINTER_TO_INT(userdata);
+	switch(sortid) {
+	case NAME:
+		{ gchar aval[0x100], bval[0x100];
+			gtk_tree_model_get(model, a, NAME, &aval, -1);
+			gtk_tree_model_get(model, b, NAME, &bval, -1);
+			if(aval == NULL || bval == NULL) {
+				if(aval == NULL && bval == NULL) 
+					return 0;
+				if(bval == NULL) {
+					g_free(aval);
+					return -1;
+				} else {
+					g_free(bval);
+					return 1;
+				}
+			}
+			gint ret = g_utf8_collate(aval,bval);
+			g_free(aval);
+			g_free(bval);
+			return ret;
+		}
+	case ELAPSED:
+		{ gint aval, bval;
+			gtk_tree_model_get(model, a, ELAPSED_ORDER, &aval, -1);
+			gtk_tree_model_get(model, b, ELAPSED_ORDER, &bval, -1);
+			if(aval == bval)
+				return 0;
+			return aval < bval ? -1 : 1;
+		}
+	default:
+		abort();
+	};
+					
+}
+	
+static void setup_sorting(GtkTreeSortable* sortable) {
+	Column sortid;
+	GtkSortType order;
+	gtk_tree_sortable_get_sort_column_id(sortable, &sortid, &order);
+	void checkone(Column column) {
+		
+}
+
 void update_init(struct update_info* this) {
 	/* stupid window managers... alt-tab thing stupidly clips off the edges,
 		 unless it's small enough. Then it scales it up and THEN clips off the
@@ -89,13 +139,13 @@ int update_intervals(gpointer udata) {
 	struct db_habit habit;
 	GdkRGBA thingy;
 	bool odd = false;
-	double max_ratio = -1;
+	gint max_ratio = -QUANTUM;
 	bool got_ratio = false;
 	while(db_next(&habit)) {
 		const char* elapsed = "never";
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
-			int ratio = QUANTUM * (habit.elapsed - habit.frequency) /
+			gint ratio = QUANTUM * (habit.elapsed - habit.frequency) /
 				(double)habit.frequency;
 			if(got_ratio == false) {
 				max_ratio = ratio;
@@ -144,9 +194,10 @@ int update_intervals(gpointer udata) {
 
 	// let's get quantum!
 	if(max_ratio != this->last_ratio) {
+		printf("New icon at %d -> %d\n",this->last_ratio, max_ratio);
 		this->last_ratio = max_ratio;
-		printf("New icon at %d\n",max_ratio);
 		color_for(&thingy,max_ratio);
+		printf("%f %f %f\n",thingy.red,thingy.green,thingy.blue);
 		cairo_t* cairo = cairo_create(this->surface);
 		cairo_set_source_rgb(cairo,
 												 thingy.red,

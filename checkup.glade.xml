@@ -26,6 +26,8 @@
       <column type="gint64"/>
       <!-- column-name background -->
       <column type="GdkRGBA"/>
+      <!-- column-name elapsed_order -->
+      <column type="gint"/>
     </columns>
   </object>
   <object class="GtkImage" id="search_image">
@@ -56,10 +58,10 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="model">items</property>
-                <property name="headers_clickable">False</property>
                 <property name="rules_hint">True</property>
                 <property name="enable_search">False</property>
                 <property name="search_column">0</property>
+                <property name="rubber_banding">True</property>
                 <property name="enable_grid_lines">horizontal</property>
                 <child internal-child="selection">
                   <object class="GtkTreeSelection" id="selection">
@@ -71,6 +73,9 @@
                     <property name="resizable">True</property>
                     <property name="title" translatable="yes">name</property>
                     <property name="expand">True</property>
+                    <property name="clickable">True</property>
+                    <property name="sort_indicator">True</property>
+                    <property name="sort_column_id">0</property>
                     <child>
                       <object class="GtkCellRendererText" id="name"/>
                       <attributes>
@@ -85,6 +90,10 @@
                     <property name="resizable">True</property>
                     <property name="title" translatable="yes">elapsed</property>
                     <property name="expand">True</property>
+                    <property name="clickable">True</property>
+                    <property name="sort_indicator">True</property>
+                    <property name="sort_order">descending</property>
+                    <property name="sort_column_id">1</property>
                     <child>
                       <object class="GtkCellRendererText" id="elapsed_renderer"/>
                       <attributes>

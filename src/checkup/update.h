@@ -25,7 +25,8 @@ enum Column {
 	DISABLED,
 	DANGER,
 	IDENT,
-	BACKGROUND
+	BACKGROUND,
+	ELAPSED_ORDER
 };
 
 #endif /* UPDATE_H */
