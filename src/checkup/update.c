@@ -120,8 +120,13 @@ static void setup_sorting(GtkTreeSortable* sortable) {
 																	NULL);
 	gtk_tree_sortable_set_sort_func(sortable, ELAPSED,
 																	compare_int,
-																	GINT_TO_POINTER(ELAPSED_ORDER),
-																	NULL);		
+																	GINT_TO_POINTER(DANGER_RATIO),
+																	NULL);
+
+	
+	gtk_tree_sortable_set_sort_column_id(sortable, ELAPSED,
+																			 GTK_SORT_DESCENDING);
+
 }
 
 void update_init(struct update_info* this) {
@@ -145,9 +150,10 @@ int update_intervals(gpointer udata) {
 	bool got_ratio = false;
 	while(db_next(&habit)) {
 		const char* elapsed = "never";
+		gint ratio = 0;
 		if(habit.has_performed) {
 			elapsed = readable_interval(habit.elapsed / 1000, true);
-			gint ratio = QUANTUM * (habit.elapsed - habit.frequency) /
+			ratio = QUANTUM * (habit.elapsed - habit.frequency) /
 				(double)habit.frequency;
 			if(got_ratio == false) {
 				max_ratio = ratio;
@@ -183,13 +189,13 @@ int update_intervals(gpointer udata) {
 				 ELAPSED, elapsed,
 				 BACKGROUND, background,
 				 NAME, habit.description,
-				 ELAPSED_ORDER, habit.elapsed
 				 -1);
 		}
 		if(habit.has_performed) {
 			gtk_list_store_set(GTK_LIST_STORE(this->items),
 												 &row,
 												 DANGER, &thingy,
+												 DANGER_RATIO, ratio,
 												 -1);
 		}
 		has_row = gtk_tree_model_iter_next(this->items,&row);
@@ -245,8 +251,8 @@ int update_intervals(gpointer udata) {
 }
 
 void update_start(struct update_info* this) {
-//	if(this->updater==0)
-//		this->updater = g_timeout_add_seconds(1, update_intervals, this);
+	if(this->updater==0)
+		this->updater = g_timeout_add_seconds(1, update_intervals, this);
 }
 
 void update_stop(struct update_info* this) {

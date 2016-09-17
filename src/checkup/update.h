@@ -29,7 +29,7 @@ enum Column {
 	DANGER,
 	IDENT,
 	BACKGROUND,
-	ELAPSED_ORDER
+	DANGER_RATIO
 };
 
 #endif /* UPDATE_H */

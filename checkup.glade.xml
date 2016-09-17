@@ -30,7 +30,7 @@
       <column type="gint"/>
     </columns>
   </object>
-  <object class="GtkTreeModelSort" id="sorted_items">
+  <object class="GtkTreeModelSort" id="sortable_items">
     <property name="model">items</property>
   </object>
   <object class="GtkImage" id="search_image">
@@ -50,17 +50,19 @@
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
+        <property name="baseline_position">top</property>
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow1">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="vexpand">True</property>
             <property name="hscrollbar_policy">never</property>
             <property name="shadow_type">in</property>
             <child>
               <object class="GtkTreeView" id="view">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="model">sorted_items</property>
+                <property name="model">sortable_items</property>
                 <property name="rules_hint">True</property>
                 <property name="enable_search">False</property>
                 <property name="search_column">0</property>
@@ -202,7 +204,10 @@
         </child>
         <child>
           <object class="GtkSearchEntry" id="search">
+            <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="has_focus">True</property>
+            <property name="is_focus">True</property>
             <property name="no_show_all">True</property>
             <property name="text" translatable="yes">%</property>
             <property name="primary_icon_name">edit-find-symbolic</property>
@@ -211,7 +216,7 @@
             <property name="placeholder_text" translatable="yes">Search...</property>
           </object>
           <packing>
-            <property name="expand">True</property>
+            <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">2</property>
           </packing>

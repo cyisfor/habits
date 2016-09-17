@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	struct update_info update_info = {
 		icon: status,
 		items: items,
-		sortable_items: GTK_TREE_SORTABLE(GET("sortable_items"))
+		sortable_items: GTK_TREE_SORTABLE(GET("sortable_items")),
 		top: GTK_WINDOW(top),
 	};
 	update_init(&update_info);
