@@ -77,7 +77,7 @@ compare_string (GtkTreeModel *model,
 								GtkTreeIter  *a,
 								GtkTreeIter  *b,
 								gpointer      userdata) {
-	gchar aval[0x100], bval[0x100];
+	gchar* aval = NULL, *bval = NULL;
 	gint column = GPOINTER_TO_INT(userdata);
 	gtk_tree_model_get(model, a, column, &aval, -1);
 	gtk_tree_model_get(model, b, column, &bval, -1);
@@ -113,13 +113,14 @@ compare_int (GtkTreeModel *model,
 }
 	
 static void setup_sorting(GtkTreeSortable* sortable) {
-	Column sortid;
 	GtkSortType order;
 	gtk_tree_sortable_set_sort_func(sortable, NAME,
-																	compare_string, NAME,
+																	compare_string,
+																	GINT_TO_POINTER(NAME),
 																	NULL);
 	gtk_tree_sortable_set_sort_func(sortable, ELAPSED,
-																	compare_int, ELAPSED_ORDER,
+																	compare_int,
+																	GINT_TO_POINTER(ELAPSED_ORDER),
 																	NULL);		
 }
 
@@ -130,7 +131,7 @@ void update_init(struct update_info* this) {
 	*/
 	this->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 																						 size + (border<<1), size);
-	setup_sorting(GTK_SORTABLE(this->items));
+	setup_sorting(this->sortable_items);
 }
 
 int update_intervals(gpointer udata) {
@@ -182,6 +183,7 @@ int update_intervals(gpointer udata) {
 				 ELAPSED, elapsed,
 				 BACKGROUND, background,
 				 NAME, habit.description,
+				 ELAPSED_ORDER, habit.elapsed
 				 -1);
 		}
 		if(habit.has_performed) {
@@ -243,8 +245,8 @@ int update_intervals(gpointer udata) {
 }
 
 void update_start(struct update_info* this) {
-	if(this->updater==0)
-		this->updater = g_timeout_add_seconds(1, update_intervals, this);
+//	if(this->updater==0)
+//		this->updater = g_timeout_add_seconds(1, update_intervals, this);
 }
 
 void update_stop(struct update_info* this) {

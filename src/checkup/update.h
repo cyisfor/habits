@@ -7,6 +7,9 @@
 struct update_info {
 	GtkStatusIcon* icon;
 	GtkTreeModel* items;
+	// MUST wrap this in a GtkTreeModelSort since the db
+	// assumes the store is in the order it provides
+	GtkTreeSortable* sortable_items;
 	GtkWindow* top;
 	cairo_surface_t* surface;
 	guint updater;
