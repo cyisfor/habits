@@ -204,7 +204,6 @@
         </child>
         <child>
           <object class="GtkSearchEntry" id="search">
-            <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="has_focus">True</property>
             <property name="is_focus">True</property>

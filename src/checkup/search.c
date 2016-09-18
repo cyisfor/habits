@@ -43,6 +43,8 @@ static void toggle_search(GtkButton* btn, void* udata) {
 		search_for_stuff(this);
 		gtk_image_set_from_icon_name(this->image, "gtk-close",
 																 GTK_ICON_SIZE_BUTTON);
+		gtk_entry_grab_focus_without_selecting(this->entry);
+		gtk_editable_set_position(GTK_EDITABLE(this->entry),-1);
 	}
 }
 
